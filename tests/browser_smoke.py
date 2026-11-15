@@ -48,12 +48,23 @@ def main():
             expect(next_button).to_be_enabled(timeout=30000)
             next_button.click()
             expect(page.get_by_text("1 of 16 test types")).to_be_visible(timeout=30000)
+
+            # Test the other user-facing workflow, not only the simulated auto-result.
+            page.get_by_role("button", name="Reset").click()
+            expect(next_button).to_be_disabled(timeout=30000)
+            page.get_by_text("Manual fictional case", exact=True).click()
+            start_button.click()
+            manual_button = page.get_by_role("button", name="Record entered result")
+            expect(manual_button).to_be_enabled(timeout=30000)
+            manual_button.click()
+            expect(page.get_by_text("1 of 16 test types")).to_be_visible(timeout=30000)
+
             assert not exceptions, f"Browser JS error: {exceptions}"
             Path("artifacts/hospital").mkdir(parents=True, exist_ok=True)
             page.screenshot(path="artifacts/hospital/mobile_demo_verified.png", full_page=True)
             browser.close()
         print("PASS: HTTP server, config, 8 callback outputs, synthetic + manual modes, "
-              "phone viewport, start and next test clicks, updated cost dashboard.")
+              "phone viewport, reset, synthetic clicks, manual record click and updated dashboard.")
     finally:
         demo.close()
 
