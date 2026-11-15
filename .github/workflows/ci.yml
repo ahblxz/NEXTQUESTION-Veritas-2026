@@ -37,7 +37,7 @@ jobs:
           test -f notebooks/02_run_complete_project.ipynb
           test -f requirements.txt
       - name: Compile every active Python module
-        run: python -m py_compile hospital/engine.py hospital_train.py app.py tests/test_hospital.py tests/browser_smoke.py
+        run: python -m py_compile hospital/engine.py hospital/audit.py hospital/public_benchmark.py hospital_train.py app.py tests/test_hospital.py tests/test_audit.py tests/browser_smoke.py
       - name: Verify official Colab notebook parses
         run: |
           python - <<'PY'
@@ -49,9 +49,13 @@ jobs:
           print("All official Colab Python cells compile")
           PY
       - name: Run multi-condition model, safety, and dashboard regressions
-        run: PYTHONPATH=. python -m pytest -q tests/test_hospital.py
+        run: PYTHONPATH=. python -m pytest -q tests/test_hospital.py tests/test_audit.py
       - name: Evaluate 4800 synthetic cases with held-out test split
         run: python hospital_train.py --out artifacts/hospital --n 4800
+      - name: Produce held-out false-positive/false-negative confusion, failure and robustness reports
+        run: python -m hospital.audit
+      - name: Evaluate independently sourced public symptom dataset (not lab tests)
+        run: python -m hospital.public_benchmark
       - name: Launch Gradio and click real mobile interface
         run: |
           python -m pip install playwright
