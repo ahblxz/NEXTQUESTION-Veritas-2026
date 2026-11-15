@@ -6,6 +6,7 @@ No clinical accuracy, test avoidance, or financial savings are established.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -277,10 +278,24 @@ ALIASES = {
 
 
 def extract_symptoms(text):
-    """Conservative keyword mapper, not an LLM medical language interpreter."""
+    """Conservative fictional-case keyword parser; negated keywords are omitted.
+
+    This is NOT reliable medical NLP; supported symptom checkboxes are authoritative.
+    """
     value = " ".join(str(text).lower().replace("-", " ").split())
-    return [key for key, tokens in ALIASES.items()
-            if any(token in value for token in tokens)]
+    found = []
+    for key, tokens in ALIASES.items():
+        for token in tokens:
+            expression = r"(?<!\\w)" + re.escape(token) + r"(?!\\w)"
+            for match in re.finditer(expression, value):
+                prefix = value[max(0, match.start() - 42):match.start()]
+                if re.search(r"\\b(?:no|denies|deny|without|negative for|not having)\\s+(?:\\w+\\s+){0,2}$", prefix):
+                    continue
+                found.append(key)
+                break
+            if key in found:
+                break
+    return found
 
 
 def make_demo_cases(data, count=12):
