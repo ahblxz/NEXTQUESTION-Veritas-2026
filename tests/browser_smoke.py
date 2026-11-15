@@ -76,8 +76,32 @@ def main():
                 pale.extend([selector + ": " + value for value in colors])
             assert not pale, f"Pale/unstyled UI elements: {pale}"
             screen_width = page.evaluate("document.documentElement.scrollWidth")
+            overflow_elements = page.evaluate("""() => {
+                const hits = [];
+                function walk(root) {
+                    for (const el of root.querySelectorAll('*')) {
+                        const rect = el.getBoundingClientRect();
+                        if (rect.width > 0 &&
+                            (rect.right > innerWidth + 8 || rect.left < -8) &&
+                            rect.width > 35) {
+                            hits.push({
+                                tag: el.tagName.toLowerCase(),
+                                id: el.id,
+                                cls: String(el.className).slice(0,75),
+                                left: Math.round(rect.left),
+                                right: Math.round(rect.right),
+                                width: Math.round(rect.width)
+                            });
+                        }
+                        if (el.shadowRoot) walk(el.shadowRoot);
+                    }
+                }
+                walk(document);
+                return hits.slice(0,22);
+            }""")
             assert screen_width <= 396, (
-                f"Horizontal overflow on 390px phone: {screen_width}"
+                f"Horizontal overflow on 390px phone: {screen_width}. "
+                f"Elements exceeding viewport: {overflow_elements}"
             )
             print("PASS: dark form controls; no default white input boxes or horizontal phone overflow.")
             start_button = page.get_by_role("button", name="Start assessment")
