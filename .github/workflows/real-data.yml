@@ -19,8 +19,16 @@ jobs:
           python-version: '3.11'
       - name: Download authentic deidentified public hospital records and profile cohort
         run: python -m hospital.mimic_probe
+      - name: Evaluate genuine patient-level MIMIC laboratory replay
+        run: |
+          python -m pip install 'numpy>=1.24,<3'
+          python -m hospital.mimic_real
       - uses: actions/upload-artifact@v4
         with:
           name: real-mimic-source-data-quality
-          path: artifacts/mimic_real/probe.json
+          path: |
+            artifacts/mimic_real/probe.json
+            artifacts/mimic_real/real_metrics.json
+            artifacts/mimic_real/real_model.json
+            artifacts/mimic_real/real_demo_cases.json
           retention-days: 14
