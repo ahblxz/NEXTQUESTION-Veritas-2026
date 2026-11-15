@@ -1,0 +1,37 @@
+name: NEXTQUESTION clean voiceover demo
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tests/record_clean_demo.py'
+      - '.github/workflows/clean-demo.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  record-no-captions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install model and app dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install 'playwright>=1.48,<2'
+          python -m playwright install --with-deps chromium
+      - name: Prepare reproducible fictional and genuinely public EHR studies
+        run: |
+          python hospital_train.py --out artifacts/hospital --n 4800
+          python -m hospital.mimic_real
+      - name: Record complete silent real-browser walkthrough without captions
+        run: python tests/record_clean_demo.py
+      - name: Upload original clear 16:9 narration-ready video
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEXTQUESTION-full-clean-voiceover-demo
+          path: artifacts/hospital/NEXTQUESTION_full_voiceover_demo.webm
+          if-no-files-found: error
+          retention-days: 14
