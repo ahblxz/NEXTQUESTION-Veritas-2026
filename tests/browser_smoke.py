@@ -40,6 +40,15 @@ def main():
             exceptions = []
             page.on("pageerror", lambda exc: exceptions.append(str(exc)))
             page.goto("http://127.0.0.1:7870/", wait_until="domcontentloaded", timeout=30000)
+            # Wait for Gradio's client-side component mount before inspecting
+            # DOM IDs (DOMContentLoaded alone is too early).
+            expect(page.get_by_role("button", name="Start assessment")).to_be_visible(
+                timeout=30000
+            )
+            Path("artifacts/hospital").mkdir(parents=True, exist_ok=True)
+            page.screenshot(
+                path="artifacts/hospital/mobile_initial_polished.png", full_page=True
+            )
             # Visual QA: no light default Gradio tiles in any intake form.
             # Playwright's locator pierces Gradio's shadow DOM; document.querySelector
             # alone doesn't, so inspect the actual computed styles on real inputs.
