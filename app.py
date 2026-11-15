@@ -37,6 +37,26 @@ CSS = """
 .gradio-container { max-width: 1240px !important; margin: auto !important;
                     background: #09111e !important; color: #e8f3fa !important; }
 .gradio-container, .gradio-container * { box-sizing: border-box; }
+/* Ensure Gradio's native inputs match the dark research dashboard. */
+.gradio-container {
+  --body-background-fill: #09111e;
+  --block-background-fill: #142536;
+  --input-background-fill: #1c3345;
+  --body-text-color: #eaf4fb;
+  --block-label-text-color: #c3d9e6;
+  --block-border-color: #35576b;
+  --input-border-color: #4a697b;
+  --button-secondary-background-fill: #294358;
+  --button-secondary-text-color: #ffffff;
+}
+.gradio-container input, .gradio-container textarea, .gradio-container select {
+  background-color: #193042 !important;
+  color: #f0f8ff !important;
+  border-color: #436176 !important;
+}
+.gradio-container label, .gradio-container label span,
+.gradio-container .block-label { color: #d8e8f3 !important; }
+
 .nq-hero { background: linear-gradient(115deg,#111f34,#142a37); padding: 26px 28px;
            border: 1px solid #304557; border-radius: 18px; margin: 14px 0; }
 .nq-kicker { color: #74ebc2 !important; letter-spacing: .17em; font-size: 12px; font-weight: 700; }
