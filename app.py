@@ -211,7 +211,13 @@ body { margin:0; }
 .nq-step-title span {width:22px;height:22px;display:grid;place-items:center;
   background:#184248;color:#82fff0 !important;border-radius:6px;font-size:11px;}
 .nq-section-divider {height:1px;background:#293d4c;margin:16px 0;}
-.nq-auto-controls,.nq-manual-controls {margin-top:12px;}
+.nq-auto-controls,.nq-manual-controls {
+  margin-top:12px;background:transparent !important;border:0 !important;
+  box-shadow:none !important;padding:0 !important;
+}
+.nq-auto-controls > div,.nq-manual-controls > div {
+  background:transparent !important;border-color:transparent !important;
+}
 /* Buttons – consistent height, strong contrast, no default pale white states */
 .gradio-container button {
   min-height:44px !important;border-radius:10px !important;
@@ -287,7 +293,20 @@ body { margin:0; }
   .nq-intake-column {padding:15px !important;}
 }
 @media(max-width:670px) {
-  .gradio-container {padding:8px 10px 20px !important;}
+  /* Gradio's default wrapper can inherit a 500px min-content width. */
+  .gradio-container {
+    width:100vw !important;max-width:100vw !important;min-width:0 !important;
+    padding:8px 10px 20px !important;overflow-x:clip !important;
+  }
+  .gradio-container .main.fillable,.gradio-container .main,
+  .gradio-container main.contain,.gradio-container .wrap,
+  .gradio-container .column,.gradio-container .html-container,
+  .gradio-container .prose {
+    width:100% !important;max-width:100% !important;min-width:0 !important;
+  }
+  .nq-brand {flex-wrap:wrap !important;justify-content:flex-start !important;}
+  .nq-tagline {white-space:normal !important;max-width:100% !important;}
+  .nq-hero h1 {overflow-wrap:anywhere !important;}
   .nq-hero {padding:18px !important;border-radius:15px;}
   .nq-hero h1 {font-size:29px !important;}
   .nq-hero p {font-size:12px;}
