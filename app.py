@@ -302,6 +302,20 @@ body { margin:0; }
   .nq-insights-column {padding:0 !important;}
   .nq-card {padding:13px !important;border-radius:12px;}
   .nq-line {align-items:flex-start;}
+  /* Force a true single-column layout on phones; Gradio's nested flex items
+     otherwise retain an intrinsic width and cause horizontal scrolling. */
+  .nq-main-layout {display:flex !important;flex-direction:column !important;
+    align-items:stretch !important;flex-wrap:wrap !important;
+    min-width:0 !important;max-width:100% !important;width:100% !important;}
+  .nq-main-layout > *,.nq-intake-column,.nq-insights-column {
+    min-width:0 !important;max-width:100% !important;
+    width:100% !important;flex:0 1 auto !important;}
+  .nq-intake-column > *,.nq-insights-column > * {
+    min-width:0 !important;max-width:100% !important;}
+  #nq-symptoms,#nq-flags,#nq-manual-test {min-width:0 !important;max-width:100% !important;}
+  #nq-symptoms .wrap,#nq-flags .wrap {min-width:0 !important;
+    max-width:100% !important;flex-wrap:wrap !important;overflow-x:clip !important;}
+  .nq-benchmark .nq-bench-tile {min-width:0 !important;}
 }
 """
 THEME = gr.themes.Base(
