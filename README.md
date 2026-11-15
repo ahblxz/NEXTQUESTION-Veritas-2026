@@ -92,7 +92,7 @@ These sources establish that unnecessary tests and affordability are real concer
 
 All research outputs regenerate in \`artifacts/hospital/\`: \`metrics.json\`, \`audit_metrics.json\`, \`audit_report.md\`, \`results.md\`, \`public/metrics.json\` and deterministic demo scenarios. The [GitHub Actions tab](https://github.com/ahblxz/NEXTQUESTION-Veritas-2026/actions) provides reproducible logs and a downloadable results/screenshot artifact.
 
-**Libraries and tools:** Python 3.11, NumPy, Gradio, pytest, Playwright, Docker, GitHub Actions, Google Colab; public symptom benchmark source linked above; OpenAI ChatGPT was used for software-development assistance. No pretrained clinical model, paid API or private patient database was used. All other AI coding tools actually used by the team should also be disclosed in the submission form.
+**Libraries and tools:** Python 3.11, NumPy, Gradio, pytest, Playwright, Docker, GitHub Actions, Google Colab; public symptom benchmark source linked above; AI development assistance included [OpenAI ChatGPT](https://chatgpt.com/) and [Anthropic Claude](https://claude.ai/). No pretrained clinical model, paid clinical API or private patient database was used. All tools actually used by team members must be disclosed on the submission form.
 
 ## Important limitations
 
