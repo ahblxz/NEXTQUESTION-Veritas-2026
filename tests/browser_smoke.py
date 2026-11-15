@@ -75,6 +75,24 @@ def main():
                 }""")
                 pale.extend([selector + ": " + value for value in colors])
             assert not pale, f"Pale/unstyled UI elements: {pale}"
+            geometry = {}
+            for selector in (
+                ".gradio-container", ".main.fillable", "main.contain",
+                ".nq-hero", ".nq-main-layout", ".nq-intake-column"
+            ):
+                node = page.locator(selector).first
+                if node.count():
+                    geometry[selector] = node.evaluate("""el => {
+                        const r = el.getBoundingClientRect();
+                        const css = getComputedStyle(el);
+                        return {
+                            left: Math.round(r.left),
+                            width: Math.round(r.width),
+                            margin: css.margin,
+                            padding: css.padding,
+                        };
+                    }""")
+            print("MOBILE LAYOUT GEOMETRY:", geometry)
             screen_width = page.evaluate("document.documentElement.scrollWidth")
             overflow_elements = page.evaluate("""() => {
                 const hits = [];
@@ -103,7 +121,10 @@ def main():
                 f"Horizontal overflow on 390px phone: {screen_width}. "
                 f"Elements exceeding viewport: {overflow_elements}"
             )
-            print("PASS: dark form controls; no default white input boxes or horizontal phone overflow.")
+            assert geometry.get(".nq-hero", {}).get("width", 0) >= 310, (
+                f"Mobile content too narrow: {geometry}"
+            )
+            print("PASS: dark form controls, full-width mobile workspace and zero overflow.")
             start_button = page.get_by_role("button", name="Start assessment")
             expect(start_button).to_be_enabled(timeout=30000)
             start_button.click()
