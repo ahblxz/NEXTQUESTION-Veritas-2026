@@ -135,3 +135,19 @@ def test_conservative_negation_in_fictional_parser(complaint, excluded, kept):
     detected = engine.extract_symptoms(complaint)
     assert excluded not in detected, (complaint, detected)
     assert kept in detected, (complaint, detected)
+
+
+
+def test_interactive_adaptive_stop_matches_research_policy():
+    import app
+    scenario = app.SCENARIOS[0]
+    first = app.start(app.SIMULATED_CASE, scenario["id"],
+                      scenario["complaint"], scenario["symptoms"], [])
+    state = app.acquire(first[0])[0]
+    assert state["cost"] > 0
+    confidence = float(app.MODEL.posterior(
+        state["symptoms"], state["obtained"]
+    ).max())
+    if confidence >= app.THRESHOLD:
+        repeated = app.acquire(state)[0]
+        assert repeated == state, "UI must not add results after its selected stopping criterion"
