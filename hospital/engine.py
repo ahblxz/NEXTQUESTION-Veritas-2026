@@ -286,10 +286,10 @@ def extract_symptoms(text):
     found = []
     for key, tokens in ALIASES.items():
         for token in tokens:
-            expression = r"(?<!\\w)" + re.escape(token) + r"(?!\\w)"
+            expression = r"(?<!\w)" + re.escape(token) + r"(?!\w)"
             for match in re.finditer(expression, value):
                 prefix = value[max(0, match.start() - 42):match.start()]
-                if re.search(r"\\b(?:no|denies|deny|without|negative for|not having)\\s+(?:\\w+\\s+){0,2}$", prefix):
+                if re.search(r"\b(?:no|denies|deny|without|negative for|not having)\s+(?:\w+\s+){0,2}$", prefix):
                     continue
                 found.append(key)
                 break
