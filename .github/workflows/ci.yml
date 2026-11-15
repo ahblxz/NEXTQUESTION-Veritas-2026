@@ -36,7 +36,7 @@ jobs:
           test -f notebooks/02_run_complete_project.ipynb
           test -f requirements.txt
       - name: Compile every active Python module
-        run: python -m py_compile hospital/engine.py hospital/audit.py hospital/public_benchmark.py hospital_train.py app.py tests/test_hospital.py tests/test_audit.py tests/browser_smoke.py
+        run: python -m py_compile hospital/engine.py hospital/audit.py hospital/public_benchmark.py hospital_train.py app.py tests/test_hospital.py tests/test_audit.py tests/browser_smoke.py tests/record_demo.py
       - name: Verify official Colab notebook parses
         run: |
           python - <<'PY'
@@ -60,6 +60,8 @@ jobs:
           python -m pip install playwright
           python -m playwright install chromium
           python tests/browser_smoke.py
+      - name: Record genuine captioned browser demonstration
+        run: python tests/record_demo.py
       - name: Build deployable Docker image and verify HTTP endpoint
         run: |
           docker build --tag nextquestion:qa .
