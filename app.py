@@ -29,6 +29,9 @@ MANUAL_CASE = "Manual fictional case"
 SYNTHETIC_WARNING = "Research simulator only · Do not enter real patient data · Not medical advice"
 FULL_COST = sum(COSTS.values())
 DEPT_COUNT = len(set(c[1] for c in CONDITIONS))
+EVALUATION = json.loads((ART / "metrics.json").read_text(encoding="utf-8"))
+ADAPTIVE_SCORE = EVALUATION["test_results"]["adaptive"]
+FIXED_SCORE = EVALUATION["test_results"]["fixed"]
 
 CSS = """
 .gradio-container { max-width: 1240px !important; margin: auto !important;
@@ -256,9 +259,10 @@ with gr.Blocks(title="NEXTQUESTION | Hospital diagnostic test prioritization") a
     gr.HTML(f"""
     <section class="nq-hero">
       <div class="nq-kicker">NEXTQUESTION · AI + HEALTH · RESEARCH PROTOTYPE</div>
-      <h1>Better questions. Fewer unnecessary investigations?</h1>
-      <p>Explore how an adaptive AI could help clinicians choose which diagnostic
-      information to collect next — across different presenting complaints.</p>
+      <h1>Which diagnostic test is worth investigating next?</h1>
+      <p>For a fictional patient, NEXTQUESTION estimates which diagnostic
+      finding could reduce uncertainty most per simulated effort point.
+      The clinician always decides. Not for real patient use.</p>
       <div class="nq-stats">
         <span class="nq-stat">{len(CONDITIONS)} simulated conditions</span>
         <span class="nq-stat">{DEPT_COUNT} clinical categories</span>
@@ -266,6 +270,22 @@ with gr.Blocks(title="NEXTQUESTION | Hospital diagnostic test prioritization") a
         <span class="nq-stat">No patient data</span>
       </div>
     </section>
+    """)
+    gr.HTML(f"""
+      <section class="nq-card">
+      <h3>Research benchmark · 960 independent held-out synthetic cases</h3>
+      <div class="nq-stats">
+        <span class="nq-stat">Adaptive accuracy <strong>{ADAPTIVE_SCORE["accuracy"]:.1%}</strong></span>
+        <span class="nq-stat">Fixed order <strong>{FIXED_SCORE["accuracy"]:.1%}</strong></span>
+        <span class="nq-stat">Adaptive tests <strong>{ADAPTIVE_SCORE["mean_tests"]:.2f}</strong></span>
+        <span class="nq-stat">Fixed tests <strong>{FIXED_SCORE["mean_tests"]:.2f}</strong></span>
+      </div>
+      <p class="nq-muted">Accuracy and counts are from a synthetic generator,
+      not patients. Mean effort was essentially identical: 
+      {ADAPTIVE_SCORE["mean_effort_points"]:.2f} vs
+      {FIXED_SCORE["mean_effort_points"]:.2f} arbitrary points.
+      No demonstrated monetary savings.</p>
+      </section>
     """)
     gr.HTML(
         '<div class="nq-badge"><strong>Safety:</strong> This is an artificial educational '
