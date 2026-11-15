@@ -350,6 +350,25 @@ body { margin:0; }
   #nq-symptoms .wrap,#nq-flags .wrap {min-width:0 !important;
     max-width:100% !important;flex-wrap:wrap !important;overflow-x:clip !important;}
   .nq-benchmark .nq-bench-tile {min-width:0 !important;}
+
+  /* Gradio 6's wrapper rules are unusually specific; these explicit overrides
+     prevent the built-in 30px + 32px padding shells consuming the phone screen. */
+  .gradio-container.gradio-container.gradio-container {
+    padding:8px 10px 20px !important;
+    width:100vw !important;max-width:100vw !important;
+  }
+  .gradio-container.gradio-container .main.fillable.fillable {
+    padding:0 !important;margin:0 !important;
+    width:100% !important;max-width:100% !important;
+  }
+  .gradio-container.gradio-container .main.fillable.fillable > .wrap {
+    padding:0 !important;margin:0 !important;
+    width:100% !important;max-width:100% !important;
+  }
+  .gradio-container.gradio-container .main.fillable.fillable main.contain {
+    padding:0 !important;margin:0 !important;
+    width:100% !important;max-width:100% !important;
+  }
 }
 """
 THEME = gr.themes.Base(
