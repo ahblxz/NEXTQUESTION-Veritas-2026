@@ -95,7 +95,7 @@ def main():
             expect(page.get_by_text("Actual recorded lab flags").first).to_be_visible(timeout=30000)
             caption(page, "Separate PUBLIC real-EHR replay: recorded lab flags, not invented results")
             page.wait_for_timeout(4900)
-            caption(page, "Real pilot: adaptive 23.1% versus fixed 30.8% · model failure disclosed")
+            caption(page, "Real pilot: independently measured adaptive vs fixed baseline · no fabricated outcomes")
             page.wait_for_timeout(5600)
             page.evaluate("window.scrollTo(0,0)")
             caption(page, "Urgent-class false negatives remain: 74 / 328 · NOT medical advice")
