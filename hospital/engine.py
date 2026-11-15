@@ -111,7 +111,8 @@ def generate_cases(n=4800, seed=SEED):
             t_prob[i, j] = max(t_prob[i, j], .34)
     symptoms = (rng.random((n, len(SYMPTOMS))) < s_prob[diagnosis]).astype(np.uint8)
     tests = (rng.random((n, len(TESTS))) < t_prob[diagnosis]).astype(np.uint8)
-    return {"diagnosis": diagnosis, "symptoms": symptoms, "tests": tests}
+    return {"diagnosis": diagnosis, "symptoms": symptoms, "tests": tests,
+            "case_id": np.arange(n, dtype=np.int64)}
 
 
 def split_cases(data, seed=SEED):
@@ -152,7 +153,7 @@ class BayesTestModel:
             raise ValueError("Test findings must be binary synthetic outcomes")
         logp = np.log(self.prior)
         # Unreported symptoms are UNKNOWN, never treated as clinically absent.
-        for name in present:
+        for name in sorted(present):
             logp += np.log(self.symptom_likelihood[:, SYMPTOM_KEYS.index(name)])
         for name, value in obtained.items():
             p = self.test_likelihood[:, TEST_KEYS.index(name)]
@@ -283,7 +284,7 @@ def extract_symptoms(text):
 
 
 def make_demo_cases(data, count=12):
-    """Return *only* held-out simulated cases, never rows used for fitting."""
+    """Select only validation-split synthetic cases, NEVER the locked test split."""
     chosen, seen = [], set()
     for i in range(len(data["diagnosis"])):
         category = CONDITIONS[int(data["diagnosis"][i])][1]
@@ -365,7 +366,14 @@ def save_research(outdir="artifacts/hospital", n=4800, seed=SEED):
                   "test_likelihood": model.test_likelihood.tolist(),
                   "effort_exponent": model.effort_exponent, "threshold": confidence}
     (out / "model.json").write_text(json.dumps(parameters), encoding="utf-8")
-    cases = make_demo_cases(test)
+    # The evaluator must NEVER expose final held-out cases via the demo.
+    assert not set(val["case_id"]).intersection(test["case_id"])
+    assert not set(train["case_id"]).intersection(test["case_id"])
+    cases = make_demo_cases(val)
+    demo_source_ids = set(int(x) for x in val["case_id"][:len(val)])
+    assert demo_source_ids.isdisjoint(set(int(x) for x in test["case_id"]))
+    payload["demo_source"] = "validation_only"
+    (out / "metrics.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     (out / "demo_cases.json").write_text(json.dumps(cases, indent=2), encoding="utf-8")
     lines = [
         "# NEXTQUESTION — synthetic multi-condition research results", "",
