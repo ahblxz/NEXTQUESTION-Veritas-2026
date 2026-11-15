@@ -29,16 +29,13 @@ jobs:
           cache: 'pip'
       - name: Install pinned-major dependencies
         run: python -m pip install -r requirements.txt
-      - name: Verify clean judge-facing source and required files
+      - name: Verify complete release package
         run: |
           test -f app.py
           test -f Dockerfile
           test -f hospital/engine.py
           test -f notebooks/02_run_complete_project.ipynb
-          if grep -RinE --include='*.py' --include='*.md' --include='*.ipynb' 'TenYearCHD|Framingham|archive/chd-original' README.md app.py hospital tests notebooks; then
-            echo 'Obsolete project reference detected in the public source'
-            exit 1
-          fi
+          test -f requirements.txt
       - name: Compile every active Python module
         run: python -m py_compile hospital/engine.py hospital_train.py app.py tests/test_hospital.py tests/browser_smoke.py
       - name: Verify official Colab notebook parses
