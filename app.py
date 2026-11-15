@@ -535,125 +535,222 @@ def reset():
     return None, *_render(None)
 
 
-with gr.Blocks(title="NEXTQUESTION | Hospital diagnostic test prioritization") as demo:
+with gr.Blocks(
+    title="NEXTQUESTION | Diagnostic information research",
+) as demo:
     gr.HTML(f"""
-    <section class="nq-hero">
-      <div class="nq-kicker">NEXTQUESTION · AI + HEALTH · RESEARCH PROTOTYPE</div>
-      <h1>Which diagnostic test is worth investigating next?</h1>
-      <p>For a fictional patient, NEXTQUESTION estimates which diagnostic
-      finding could reduce uncertainty most per simulated effort point.
-      The clinician always decides. Not for real patient use.</p>
-      <div class="nq-stats">
-        <span class="nq-stat">{len(CONDITIONS)} simulated conditions</span>
-        <span class="nq-stat">{DEPT_COUNT} clinical categories</span>
-        <span class="nq-stat">{len(TESTS)} illustrative test types</span>
-        <span class="nq-stat">No patient data</span>
+    <header class="nq-hero">
+      <div class="nq-brand">
+        <div class="nq-brand-left">
+          <div class="nq-mark">+</div>
+          <div class="nq-wordmark">NEXTQUESTION</div>
+        </div>
+        <span class="nq-tagline">RESEARCH DEMONSTRATION</span>
       </div>
-    </section>
+      <h1>Find the <span class="nq-accent">next useful test.</span><br>Not every possible test.</h1>
+      <p>A cost-aware diagnostic information simulator. Enter a fictional patient
+      presentation; watch an adaptive model prioritize the next informative
+      result and update its reasoning as evidence arrives.</p>
+      <div class="nq-hero-stats">
+        <span class="nq-hero-stat"><b>{DEPT_COUNT}</b> simulated clinical categories</span>
+        <span class="nq-hero-stat"><b>{len(CONDITIONS)}</b> artificial condition labels</span>
+        <span class="nq-hero-stat"><b>{len(TESTS)}</b> hypothetical tests</span>
+        <span class="nq-hero-stat">No real patient data in this interface</span>
+      </div>
+    </header>
     """)
     gr.HTML(f"""
-      <section class="nq-card">
-      <h3>Research benchmark · 960 independent held-out synthetic cases</h3>
-      <div class="nq-stats">
-        <span class="nq-stat">Adaptive accuracy <strong>{ADAPTIVE_SCORE["accuracy"]:.1%}</strong></span>
-        <span class="nq-stat">Fixed order <strong>{FIXED_SCORE["accuracy"]:.1%}</strong></span>
-        <span class="nq-stat">Adaptive tests <strong>{ADAPTIVE_SCORE["mean_tests"]:.2f}</strong></span>
-        <span class="nq-stat">Fixed tests <strong>{FIXED_SCORE["mean_tests"]:.2f}</strong></span>
+    <div class="nq-benchmark">
+      <div class="nq-bench-tile">
+        <span class="nq-bench-label">Adaptive accuracy</span>
+        <span class="nq-bench-value">{ADAPTIVE_SCORE["accuracy"]:.1%}</span>
+        <small>held-out synthetic cases</small>
       </div>
-      <p class="nq-muted">Accuracy and counts are from a synthetic generator,
-      not patients. Mean effort was essentially identical: 
-      {ADAPTIVE_SCORE["mean_effort_points"]:.2f} vs
-      {FIXED_SCORE["mean_effort_points"]:.2f} arbitrary points.
-      No demonstrated monetary savings.</p>
-      </section>
+      <div class="nq-bench-tile">
+        <span class="nq-bench-label">Fixed-order accuracy</span>
+        <span class="nq-bench-value">{FIXED_SCORE["accuracy"]:.1%}</span>
+        <small>same evaluation cohort</small>
+      </div>
+      <div class="nq-bench-tile">
+        <span class="nq-bench-label">Adaptive tests per case</span>
+        <span class="nq-bench-value">{ADAPTIVE_SCORE["mean_tests"]:.2f}</span>
+        <small>simulated test indicators</small>
+      </div>
+      <div class="nq-bench-tile">
+        <span class="nq-bench-label">Fixed-order tests per case</span>
+        <span class="nq-bench-value">{FIXED_SCORE["mean_tests"]:.2f}</span>
+        <small>simulated test indicators</small>
+      </div>
+      <p class="nq-benchmark-foot">The simulated effort cost was essentially equal
+      ({ADAPTIVE_SCORE["mean_effort_points"]:.2f} vs
+      {FIXED_SCORE["mean_effort_points"]:.2f} points). These results do not
+      establish actual hospital savings, medical accuracy, or patient safety.</p>
+    </div>
     """)
     gr.HTML(
-        '<div class="nq-badge"><strong>Safety:</strong> This is an artificial educational '
-        'simulation, NOT a diagnostic or medical device. Never enter real patient '
-        'information or use suggestions to delay care, refuse tests, or make medical decisions.</div>'
+        '<div class="nq-safety"><strong>Research only.</strong> This is not '
+        'a clinical device or medical advice. All cases and test findings in '
+        'this interface are fictional. Never use it to order, skip, or delay '
+        'real medical testing or enter identifiable patient information.</div>'
     )
-    with gr.Row():
-        with gr.Column(scale=5):
-            gr.Markdown("### 01 / Patient presentation")
+
+    with gr.Row(equal_height=False, elem_classes=["nq-main-layout"]):
+        with gr.Column(
+            scale=5, min_width=325, elem_classes=["nq-intake-column"]
+        ):
+            gr.HTML(
+                '<div class="nq-step-title"><span>01</span> Patient intake</div>'
+                '<p class="nq-intake-hint">Choose a prepared scenario or enter '
+                'a fictional complaint. Unselected symptoms remain unknown.</p>'
+            )
             mode = gr.Radio(
-                choices=[SIMULATED_CASE, MANUAL_CASE], value=SIMULATED_CASE,
-                label="Research mode",
+                choices=[SIMULATED_CASE, MANUAL_CASE],
+                value=SIMULATED_CASE,
+                label="Assessment mode",
+                elem_id="nq-mode",
             )
             scenario = gr.Dropdown(
                 choices=list(BY_SCENARIO),
                 value=SCENARIOS[0]["id"],
-                label="Synthetic example (covers multiple medical categories)",
+                label="Demonstration patient",
+                elem_id="nq-scenario",
             )
             complaint = gr.Textbox(
-                label="Presenting complaint (fictional free text)",
+                label="Presenting complaint",
                 value=SCENARIOS[0]["complaint"],
-                placeholder="Example: fever, cough and trouble breathing",
+                placeholder="Example: fever, cough, trouble breathing",
                 lines=2,
+                elem_id="nq-complaint",
             )
-            selected = gr.CheckboxGroup(
+            selected = gr.Dropdown(
                 choices=[(label, key) for key, label in SYMPTOMS.items()],
                 value=SCENARIOS[0]["symptoms"],
-                label="Reported symptom signals · unselected = unknown",
+                multiselect=True,
+                filterable=True,
+                label="Reported symptoms",
+                info="Search or select multiple symptoms. Not selected = unknown.",
+                elem_id="nq-symptoms",
             )
-            flags = gr.CheckboxGroup(
+            flags = gr.Dropdown(
                 choices=[(label, key) for key, label in RED_FLAGS.items()],
-                label="Safety red flags (fictional case only)",
+                value=[],
+                multiselect=True,
+                filterable=True,
+                label="Urgent warning features",
+                info="Select only if included in the fictional presentation.",
+                elem_id="nq-flags",
             )
+
+            gr.HTML('<div class="nq-section-divider"></div>'
+                    '<div class="nq-step-title"><span>02</span> Begin assessment</div>')
             with gr.Row():
-                btn_start = gr.Button("Start assessment", variant="primary")
-                btn_reset = gr.Button("Reset", variant="secondary")
-            gr.Markdown("### 02 / Results")
-            with gr.Row():
-                btn_next = gr.Button("Simulate suggested test result", interactive=False)
-                result = gr.Radio(
-                    ["Not flagged", "Abnormal / flagged"],
-                    value="Not flagged",
-                    label="Manual fictional finding",
+                btn_start = gr.Button(
+                    "Start assessment", variant="primary", elem_id="nq-start",
+                )
+                btn_reset = gr.Button(
+                    "Reset", variant="secondary", elem_id="nq-reset",
+                )
+
+            with gr.Group(
+                elem_classes=["nq-auto-controls"], visible=True
+            ) as simulated_panel:
+                gr.HTML(
+                    '<p class="nq-intake-hint">After assessment, reveal the '
+                    'AI-ranked test result to update the model.</p>'
+                )
+                btn_next = gr.Button(
+                    "Simulate suggested test result",
+                    variant="secondary",
+                    interactive=False,
+                    elem_id="nq-acquire",
+                )
+
+            with gr.Group(
+                elem_classes=["nq-manual-controls"], visible=False
+            ) as manual_panel:
+                gr.HTML(
+                    '<p class="nq-intake-hint">Enter an already available '
+                    'fictional finding, or simulate obtaining another test.</p>'
                 )
                 manual_test = gr.Dropdown(
                     choices=[(label, key) for key, (label, _) in TESTS.items()],
                     value="cbc",
-                    label="Known or clinician-chosen fictional test",
+                    label="Diagnostic test",
+                    elem_id="nq-manual-test",
+                )
+                result = gr.Radio(
+                    ["Not flagged", "Abnormal / flagged"],
+                    value="Not flagged",
+                    label="Fictional result",
+                    elem_id="nq-finding",
                 )
                 existing = gr.Checkbox(
                     value=True,
-                    label="This fictional result was already available (no new test effort)",
+                    label="Result already available (no extra effort)",
+                    elem_id="nq-existing",
                 )
-                btn_manual = gr.Button("Record entered result", interactive=False)
-            summary = gr.HTML()
-            burden = gr.HTML()
-        with gr.Column(scale=6):
-            gr.Markdown("### 03 / AI reasoning")
-            status = gr.HTML()
+                btn_manual = gr.Button(
+                    "Record fictional result",
+                    interactive=False,
+                    variant="secondary",
+                    elem_id="nq-record",
+                )
+
+        with gr.Column(
+            scale=7, min_width=350, elem_classes=["nq-insights-column"]
+        ):
+            gr.HTML(
+                '<div class="nq-step-title"><span>03</span> Diagnostic insight</div>'
+            )
+            with gr.Row(equal_height=False, elem_classes=["nq-metric-row"]):
+                status = gr.HTML()
+                burden = gr.HTML()
             differential = gr.HTML()
             tests = gr.HTML()
             pathway = gr.HTML()
+
     gr.HTML(
-        '<p class="nq-foot">NEXTQUESTION · Abdulla Alhajaj, Zayed Alketbi, Mohammed Alali'
-        ' · Veritas AI International High School Hackathon 2026. '
-        'Symptom extraction is keyword-based; all conditions, test outcomes and '
-        'cost units in this demonstration are synthetic. A licensed clinician '
-        'must order or interpret any real diagnostic test. Not medical advice.</p>'
+        '<p class="nq-foot"><strong>NEXTQUESTION</strong> · Abdulla Alhajaj, '
+        'Zayed Alketbi, Mohammed Alali · Veritas AI 2026. This application '
+        'contains only simplified, synthetic condition labels, test results '
+        'and effort points. Its keyword parser, clinical predictions, '
+        'and urgency warnings are not validated for real patients. '
+        '<strong>This project is a prototype and is not medical advice.</strong></p>'
     )
+
     state = gr.State(None)
-    outputs = [state, status, differential, tests, pathway, burden, btn_next, btn_manual]
-    # Any edit to the fictional patient invalidates the previous assessment.
-    # Without this, the page could keep showing/advancing an old patient's result.
+    outputs = [
+        state, status, differential, tests, pathway,
+        burden, btn_next, btn_manual,
+    ]
+
+    # Changing patient intake must always invalidate the earlier assessment.
     scenario.change(
         case_input, inputs=scenario, outputs=[complaint, selected]
     ).then(reset, outputs=outputs, show_progress="hidden")
     mode.change(
-        lambda m: gr.update(interactive=m == SIMULATED_CASE),
-        inputs=mode, outputs=scenario,
+        lambda m: (
+            gr.update(interactive=m == SIMULATED_CASE),
+            gr.update(visible=m == SIMULATED_CASE),
+            gr.update(visible=m == MANUAL_CASE),
+        ),
+        inputs=mode,
+        outputs=[scenario, simulated_panel, manual_panel],
     ).then(reset, outputs=outputs, show_progress="hidden")
     complaint.change(reset, outputs=outputs, show_progress="hidden")
     selected.change(reset, outputs=outputs, show_progress="hidden")
     flags.change(reset, outputs=outputs, show_progress="hidden")
-    btn_start.click(start, inputs=[mode, scenario, complaint, selected, flags],
-                    outputs=outputs, show_progress="minimal")
-    btn_next.click(acquire, inputs=state, outputs=outputs, show_progress="minimal")
-    btn_manual.click(record_result, inputs=[state, result, manual_test, existing], outputs=outputs,
-                     show_progress="minimal")
+    btn_start.click(
+        start, inputs=[mode, scenario, complaint, selected, flags],
+        outputs=outputs, show_progress="minimal",
+    )
+    btn_next.click(
+        acquire, inputs=state, outputs=outputs, show_progress="minimal",
+    )
+    btn_manual.click(
+        record_result, inputs=[state, result, manual_test, existing],
+        outputs=outputs, show_progress="minimal",
+    )
     btn_reset.click(reset, outputs=outputs)
 
 
