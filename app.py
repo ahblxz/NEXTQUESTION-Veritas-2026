@@ -43,7 +43,7 @@ body { margin:0; }
 /* Keep the competition UI focused; framework credits remain in README. */
 .gradio-container footer {display:none !important;}
 .gradio-container {
-  max-width: 1420px !important; padding: 18px 30px 36px !important;
+  max-width: 1420px !important; padding: 12px 12px 24px !important;
   margin: 0 auto !important;
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
   --body-background-fill: #070d17 !important;
@@ -55,6 +55,17 @@ body { margin:0; }
   --input-border-color: #37566a !important;
 }
 .gradio-container, .gradio-container * { box-sizing: border-box; }
+/* Default Gradio shells consume 64px of extra width. Override them at the
+   root level as well, so browsers that prioritize the base theme still shrink. */
+.gradio-container .main.fillable {
+  padding: 8px 8px !important;
+  max-width:100% !important;min-width:0 !important;
+}
+.gradio-container .main.fillable > .wrap,
+.gradio-container .main.fillable main.contain {
+  padding:0 !important;margin:0 !important;
+  max-width:100% !important;min-width:0 !important;
+}
 .gradio-container .prose,
 .gradio-container .prose h1, .gradio-container .prose h2,
 .gradio-container .prose h3, .gradio-container .prose p {
