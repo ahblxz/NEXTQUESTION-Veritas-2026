@@ -1,6 +1,6 @@
 """Record a short, captioned, genuine browser walkthrough of the live web demo.
 
-All cases are fictional and all results synthetic. Output: artifacts/hospital/
+Contains fictional method demo AND de-identified public real-EHR pilot. Output: artifacts/hospital/
 NEXTQUESTION_demo_raw.webm. This is a SILENT research screen recording, not
 a narrated, finalized competition video.
 """
@@ -80,6 +80,24 @@ def main():
             caption(page, "Held-out synthetic study: 2.79 tests adaptive vs 3.53 fixed; 7.31 effort pts each")
             page.evaluate("window.scrollTo(0,0)")
             page.wait_for_timeout(6500)
+            # Show the separate true-public-record pilot without pretending its results
+            # are equivalent to the synthetic experiment or a clinical diagnosis.
+            page.get_by_text(
+                "Explore real public de-identified hospital records (separate research pilot)",
+                exact=True
+            ).click()
+            real_start = page.get_by_role("button", name="Explore public encounter")
+            expect(real_start).to_be_visible(timeout=30000)
+            real_start.click()
+            actual = page.get_by_role("button", name="Reveal recorded lab finding")
+            expect(actual).to_be_enabled(timeout=30000)
+            actual.click()
+            expect(page.get_by_text("Actual recorded lab flags").first).to_be_visible(timeout=30000)
+            caption(page, "Separate PUBLIC real-EHR replay: recorded lab flags, not invented results")
+            page.wait_for_timeout(4900)
+            caption(page, "Real pilot: adaptive 23.1% versus fixed 30.8% · model failure disclosed")
+            page.wait_for_timeout(5600)
+            page.evaluate("window.scrollTo(0,0)")
             caption(page, "Urgent-class false negatives remain: 74 / 328 · NOT medical advice")
             page.wait_for_timeout(4200)
             caption(page, "Not medically validated. No proven cost savings. This is a research prototype.")
