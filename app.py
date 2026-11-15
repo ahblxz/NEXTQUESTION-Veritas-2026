@@ -333,11 +333,18 @@ with gr.Blocks(title="NEXTQUESTION | Hospital diagnostic test prioritization") a
     )
     state = gr.State(None)
     outputs = [state, status, differential, tests, pathway, burden, btn_next, btn_manual]
-    scenario.change(case_input, inputs=scenario, outputs=[complaint, selected])
+    # Any edit to the fictional patient invalidates the previous assessment.
+    # Without this, the page could keep showing/advancing an old patient's result.
+    scenario.change(
+        case_input, inputs=scenario, outputs=[complaint, selected]
+    ).then(reset, outputs=outputs, show_progress="hidden")
     mode.change(
         lambda m: gr.update(interactive=m == SIMULATED_CASE),
         inputs=mode, outputs=scenario,
-    )
+    ).then(reset, outputs=outputs, show_progress="hidden")
+    complaint.change(reset, outputs=outputs, show_progress="hidden")
+    selected.change(reset, outputs=outputs, show_progress="hidden")
+    flags.change(reset, outputs=outputs, show_progress="hidden")
     btn_start.click(start, inputs=[mode, scenario, complaint, selected, flags],
                     outputs=outputs, show_progress="minimal")
     btn_next.click(acquire, inputs=state, outputs=outputs, show_progress="minimal")
