@@ -39,6 +39,9 @@ def _render(state):
     known=state["obtained"]
     p=MODEL.posterior(case["complaint"],known)
     top=np.argsort(-p)[:5]
+    # Safety: even the largest research posterior is not a clinical diagnosis.
+    # This is a descriptive display threshold, not a clinical triage threshold.
+    uncertain = float(np.max(p)) < 0.50
     remaining=MODEL.rank(case["complaint"],known,eligible=set(case["available_labs"]))
     may_continue=bool(remaining) and len(known)<MAX_STEPS
     header=(
@@ -53,6 +56,11 @@ def _render(state):
         + '</div>'
     )
     differential=['<div class="nq-card"><h3>Model-ranked discharge categories</h3>']
+    if uncertain:
+        differential.append(
+            '<div class="nq-badge">High uncertainty in this small research sample. '
+            'No diagnosis is established; do not use this ranking for medical decisions.</div>'
+        )
     for index in top:
         idx=int(index)
         value=float(p[idx])
