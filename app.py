@@ -17,6 +17,7 @@ from hospital.engine import (
     CONDITIONS, COSTS, RED_FLAGS, SEED, SYMPTOMS, SYNTHETIC_NOTE, TESTS,
     URGENCY, BayesTestModel, extract_symptoms, load_model, save_research,
 )
+from hospital.real_ui import build_pilot, READY as REAL_PILOT_READY
 
 ART = Path("artifacts/hospital")
 if not (ART / "model.json").exists() or not (ART / "demo_cases.json").exists():
@@ -633,7 +634,7 @@ with gr.Blocks(
         <span class="nq-hero-stat"><b>{DEPT_COUNT}</b> simulated clinical categories</span>
         <span class="nq-hero-stat"><b>{len(CONDITIONS)}</b> artificial condition labels</span>
         <span class="nq-hero-stat"><b>{len(TESTS)}</b> hypothetical tests</span>
-        <span class="nq-hero-stat">No real patient data in this interface</span>
+        <span class="nq-hero-stat">Synthetic method demo + separate public-EHR pilot</span>
       </div>
     </header>
     """)
@@ -672,6 +673,15 @@ with gr.Blocks(
         'real medical testing or enter identifiable patient information.</div>'
     )
 
+    gr.HTML(
+        '<div class="nq-step-title"><span>S</span> Main method demonstration '
+        '· generated fictional cases</div>'
+    )
+    with gr.Accordion(
+        label="Explore real public de-identified hospital records (separate research pilot)",
+        open=False,
+    ):
+        build_pilot()
     with gr.Row(equal_height=False, elem_classes=["nq-main-layout"]):
         with gr.Column(
             scale=5, min_width=325, elem_classes=["nq-intake-column"]
