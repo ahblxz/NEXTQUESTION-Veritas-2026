@@ -1,101 +1,94 @@
 # NEXTQUESTION
-### Which diagnostic information should a clinician investigate next?
+### Which diagnostic information is worth gathering next?
 
-**Veritas AI International High School Hackathon 2026 · AI + Health**
+**AI + Health · Veritas AI International High School Hackathon 2026**
 
-NEXTQUESTION is a **clinician-facing, multi-condition educational simulator**. Given a *fictional* presentation and already available *fictional* findings, it ranks possible conditions, estimates the expected diagnostic information provided by additional tests, then updates those rankings when a result is revealed. Our research question is whether adaptive information gathering can reduce the **number of artificial tests** needed to achieve similar diagnostic classification performance.
+NEXTQUESTION is a clinician-oriented **research demonstration**, not a medical device. It explores adaptive information acquisition across different presenting complaints, rather than predicting only one condition. At each step a probabilistic model evaluates how much an unobserved finding is expected to reduce uncertainty and updates its ranking after a result is revealed.
 
-**This project is a prototype and is not medical advice.** It is **not a medical device**. Never enter real patient information or use its rankings to order, omit or postpone an actual medical test. Our diagnostic labels, findings, priors, and effort points are synthetic, not clinically validated.
+**Two experiments are deliberately kept separate.**
 
-## Run the actual demo
+| Research component | Source | What it can establish |
+|---|---|---|
+| Main interactive methodology demo | 4,800 self-generated fictional cases, 21 artificial syndrome labels, 16 binary test indicators | Reproducible, proof-of-mechanism comparison of adaptive versus fixed-order **simulated** testing |
+| Public hospital-record pilot | Openly published, de-identified MIMIC-IV and MIMIC-IV-ED Demo 2.2 | Preliminary retrospective evaluation using **actually recorded** laboratory results; not a clinical test-ordering validation |
+| Public symptom-only benchmark | Published Disease-Symptom Dataset, deduplicated by unique symptom pattern | Secondary symptom-question acquisition evaluation; **not** laboratory-test selection |
 
-**[Open Google Colab — install, evaluate, launch](https://colab.research.google.com/github/ahblxz/NEXTQUESTION-Veritas-2026/blob/main/notebooks/02_run_complete_project.ipynb)**
+**This project is a prototype and is not medical advice.** Do not enter real patient-identifiable information. Never use it to diagnose an individual, order or omit actual medical tests, or delay urgent care. Neither experiment proves actual hospital cost savings.
 
-Choose **Runtime → Run all**. When the final cell opens, click the temporary \`gradio.live\` URL. Keep Colab running. Or run the same application locally:
+## Open and reproduce the demonstration
 
-\`\`\`bash
-python -m pip install -r requirements.txt
-python -m pytest -q tests/test_hospital.py tests/test_audit.py
-python hospital_train.py --out artifacts/hospital --n 4800
-python -m hospital.audit
-python app.py
-\`\`\`
+[Run NEXTQUESTION in Google Colab](https://colab.research.google.com/github/ahblxz/NEXTQUESTION-Veritas-2026/blob/main/notebooks/02_run_complete_project.ipynb): choose **Runtime → Run all**. The final cell creates a temporary Gradio link. Keep the notebook session active.
 
-To run it as a deployable educational web service:
+For a local run, use Python 3.11 or newer:
 
-\`\`\`bash
-docker build -t nextquestion .
-docker run --rm -p 7860:7860 nextquestion
-\`\`\`
+    python -m pip install -r requirements.txt
+    python -m pytest -q tests/test_hospital.py tests/test_audit.py
+    python hospital_train.py --out artifacts/hospital --n 4800
+    python -m hospital.audit
+    python -m hospital.public_benchmark
+    python -m hospital.mimic_real
+    python -m pytest -q tests/test_real_data.py
+    python app.py
 
-Open \`http://localhost:7860\`. The Docker image is verified in CI; a **permanent public web host has not been deployed**.
+The public MIMIC data download requires internet access. **The app never substitutes fake data when that download fails**: the separate hospital-record pilot displays setup instructions instead.
 
-## Main finding (locked synthetic holdout, 960 cases)
+To build the web demo as a container:
 
-| Policy | Classification accuracy | Average simulated tests | Average hypothetical effort | Urgent-label false negatives | Urgent-label false positives |
+    docker build -t nextquestion .
+    docker run --rm -p 7860:7860 nextquestion
+
+Open http://localhost:7860. Docker builds and preserves both research models and derived validation examples, but excludes all downloaded raw EHR tables. This is a **deployable educational application**, not an always-on publicly hosted service or approved clinical system.
+
+## Main synthetic-method experiment (960 held-out artificial cases)
+
+The model uses Bayesian updates from reported fictional symptoms and acquired artificial test results. For each candidate test, the selector computes expected entropy reduction over possible outcomes, adjusting for illustrative effort. It does not see unrevealed results. Stopping and effort-exponent hyperparameters were selected on validation only.
+
+| Policy | Classification accuracy | Tests per simulated case | Arbitrary effort pts | Urgent-label FN | Urgent-label FP |
 |---|---:|---:|---:|---:|---:|
-| **Adaptive NEXTQUESTION** | **73.6%** | **2.79** | **7.31 pts** | **74** | **71** |
-| Fixed order | 70.0% | 3.53 | 7.31 pts | 94 | 69 |
-| Cheapest first | 67.2% | 3.66 | 7.08 pts | 94 | 73 |
-| Full artificial panel | 76.9% | 16.00 | 82.00 pts | 63 | 58 |
+| **Adaptive NEXTQUESTION** | **73.6%** | **2.79** | **7.31** | **74** | 71 |
+| Fixed-order comparison | 70.0% | 3.53 | 7.31 | 94 | 69 |
+| Cheapest-first comparison | 67.2% | 3.66 | 7.08 | 94 | 73 |
+| Full hypothetical panel | 76.9% | 16.00 | 82.00 | 63 | 58 |
 
-Adaptive selected approximately **21% fewer simulated test indicators** than fixed ordering and achieved +3.6 percentage points synthetic accuracy, but **did not reduce mean simulated effort**. The urgent/non-urgent confusion matrix for adaptive is **[[TN 561, FP 71], [FN 74, TP 254]]**. Urgent-label precision was **78.2%** and recall **77.4%**. These are **not** real-world emergency triage metrics.
+This is **21% fewer artificial tests**, not proven real tests avoided. **Mean simulated effort did not fall** versus the fixed strategy. The synthetic urgent-label classifier missed **74 of 328** urgent-labeled cases: its urgent-label precision was 78.2% and recall 77.4%, neither a validated emergency metric.
 
-**Honest failure:** In one held-out synthetic case, the true generated label was *Pneumonia* (urgent), but the model predicted *Viral respiratory illness* (non-urgent), after observing only the artificial symptoms fatigue/headache and a flagged CRP indicator. Possible contributors include overlapping symptom assumptions, noisy artificial findings and limited test acquisition. **It would be unsafe to treat the model's classification as clinical advice.**
+An example of actual held-out *simulation failure*: one pneumonia-labeled artificial case was predicted as viral respiratory illness after fatigue, headache, and a flagged artificial CRP result. We publish false positives, false negatives, a 21×21 confusion matrix, uncertainty intervals, counterfactual budget tests, and independent-seed stress tests in the generated artifact folder.
 
-## How it works — and our original addition
+## Genuine public clinical record pilot — separate and exploratory
 
-- **Who would use the concept:** A doctor reviewing a patient's presenting complaint and previous results before considering additional tests. The actual software is strictly a demonstration using invented scenarios.
-- **Inputs:** Fictional symptoms, red flags and optionally an existing, invented binary test result. Free text is conservative keyword matching; the symptom checkboxes are more reliable.
-- **Model:** Naïve Bayes with smoothed class-conditional symptom and test probabilities, learned from synthetic training records. Unknown symptoms are not automatically assumed absent.
-- **Original contribution:** Adaptive test acquisition, **not a disease-specific classifier**. At each step the model estimates every unopened test's expected reduction in entropy and ranks by a validation-selected trade-off with illustrative test effort. Test results remain hidden until acquired; each one updates the differential and next recommendation.
-- **Safety:** Fictional urgent warning flags override any cost-optimization story; the software never automatically cancels a test. Actual emergency assessment is outside its capabilities.
-- **Evaluation protocol:** 4,800 generated cases; **3,120 training / 720 validation / 960 final held-out**. Stopping threshold and effort exponent are selected using validation only. **All demonstration cases are from validation**, never the final test set. Each run saves the per-class confusion matrix, 2×2 urgent-label confusion, 21 one-vs-rest error counts, failure examples and paired uncertainty intervals.
+Sources: [MIMIC-IV Clinical Database Demo (2023), DOI 10.13026/dp1f-ex47](https://physionet.org/content/mimic-iv-demo/2.2/) and [MIMIC-IV-ED Demo (2023), DOI 10.13026/jzz5-vs76](https://physionet.org/content/mimic-iv-ed-demo/2.2/). Both are publicly available, de-identified **real** hospital record samples under [ODbL 1.0](https://physionet.org/content/mimic-iv-demo/view-license/2.2/).
 
-### Independent stress tests (no model retuning)
+The pilot examines **222 eligible admissions from 93 patients**. We split by patient rather than by admission: **60 patients / 135 admissions for training**, **14 / 48 for validation**, **19 / 39 for held-out test**. It models 12 **genuinely recorded** early laboratory abnormal-flag indicators and broad primary ICD discharge chapters. The public replay uses only **validation patients**; patients in the test cohort are not exposed through the demo.
 
-Using independently generated synthetic evaluation cohorts:
-- **30% of reported positive symptoms suppressed:** adaptive accuracy **67.4%**, fixed **62.0%**.
-- **10% of binary test findings flipped:** adaptive **67.5%**, fixed **64.9%**.
-- **Different urgent-class prevalence:** adaptive **72.8%**, fixed **68.3%**.
-- **Different hypothetical test costs:** adaptive **74.1%**, fixed **69.7%**.
-- **New random seed under original assumptions:** adaptive **74.6%**, fixed **70.1%**.
+| Held-out retrospective replay | Adaptive | Fixed order |
+|---|---:|---:|
+| Accuracy classifying broad discharge-diagnosis chapter | **23.1%** | **30.8%** |
+| Mean historically recorded laboratory indicators revealed | 4.0 | 4.0 |
 
-These stress tests still use variations of the **same hand-designed artificial data generator**, so they are **not independent medical or hospital validation**.
+**Adaptive was worse on the real pilot.** This result is not hidden or substituted with synthetic accuracy. The study is tiny and selected; the model does not classify arbitrary real hospital patients reliably. It only replays tests **known in hindsight to have been performed**. No test is invented when absent, and missing is not treated as negative. Because historically unperformed test outcomes and clinical necessity are unknown, there is **selection bias** and no reliable counterfactual cost or test-reduction evaluation. Primary discharge groups are imperfect proxies for correct diagnosis.
 
-### Supplemental public-data benchmark
+The Health Track says **use public datasets only** and cautions against real patient records. These PhysioNet demos are openly released and de-identified, not private hospital records, but **organizer confirmation of acceptability has not been obtained**. This public pilot should be described as a supplementary research investigation, not a claim that NEXTQUESTION is safe for clinical deployment.
 
-The AI + Health brief says **“Use public datasets only.”** To add a publicly sourced experiment, \`hospital/public_benchmark.py\` downloads and benchmarks the public [Disease-Symptom Dataset](https://github.com/hemasriram111/Disease-Symptom-Dataset) at a pinned commit. **4,920 CSV rows shrink to 304 unique symptom patterns** after deduplication. We split by unique symptom evidence, with 222 training, 41 validation and 41 held-out patterns, preventing exact duplicates crossing splits.
+## Public symptom-only benchmark
 
-On that **small, highly templated, public symptom-only benchmark**, adaptive symptom questioning achieved **97.6% accuracy with 4.51 questions** versus fixed-order questioning's **75.6% with 7.90 questions**. This is **not a diagnostic laboratory test benchmark**: the dataset has symptoms and disease labels, but **no lab-test findings, prices or care appropriateness labels**. Its original licensing is not clearly documented, so the raw CSV is fetched from the source and **not redistributed**. The main 21-condition lab-test simulation is still independently generated; judges should assess the track-specific public-data requirement with this distinction in mind.
+The independent [Disease-Symptom Dataset](https://github.com/hemasriram111/Disease-Symptom-Dataset) contains 4,920 source rows but only **304 unique symptom patterns**. We deduplicate *before* splitting: 222 training, 41 validation, 41 held-out patterns. On this limited, templated dataset, adaptive symptom questioning reached 97.6% top-1 accuracy with 4.51 questions, versus 75.6% and 7.90 for fixed ordering. **Those results do not involve blood tests, imaging, actual medical charges, or verified clinical encounter outcomes.** The original source has no clearly declared data license; our code fetches it and does not redistribute its CSV.
 
-### Motivating evidence (not evidence of our product's benefit)
+## Why this matters and what is novel
 
-- A [2021 systematic review in BMJ Quality & Safety](https://pubmed.ncbi.nlm.nih.gov/33972387/) analyzed 118 estimates of diagnostic test overuse; estimates varied widely across conditions and definitions.
-- [Peterson–KFF's March 2026 analysis](https://www.healthsystemtracker.org/chart-collection/cost-affect-access-care/) reports that around **17% of US adults** delayed or went without some health care because of cost in 2024. This is a **US** statistic, not a UAE estimate.
-- [Synthea](https://github.com/synthetichealth/synthea) documents synthetic multi-condition clinical data and informs future research directions. **We did not claim to train on Synthea records.**
+The intended user is a **clinician deciding which information is missing** after a patient's initial presentation and existing investigations. Traditional disease classifiers output a probability from a fixed feature vector. NEXTQUESTION explores a different algorithmic step: **actively choose the next informative measurement under constraints**, update when it arrives, and distinguish simulated effort from medical costs. The project addresses concerns about test overuse and financial barriers to care; it **does not establish** fewer real hospital tests, earlier diagnoses, lower bills, or lives saved.
 
-These sources establish that unnecessary tests and affordability are real concerns; they do **not** establish that NEXTQUESTION safely avoids clinical tests, improves diagnosis timing, reduces actual bills or saves lives.
+## Reproducibility, quality assurance, and attribution
 
-## Reproducibility, release and source credits
+- **Code:** hospital/engine.py — synthetic method; hospital/audit.py — confusion matrices, holdout errors and robustness; hospital/mimic_real.py — real public EHR patient-level experiment; hospital/real_ui.py — separate real-record explorer; hospital/public_benchmark.py — symptom-only benchmark.
+- **Application:** app.py — responsive Gradio UI with hidden-result acquisition, manual prior findings, safeguards, and reset.
+- **Testing:** tests/ — model/split/unit tests, hidden-result leakage checks, real-record replay tests, and Chromium browser checks for desktop/mobile.
+- **Deployment:** Dockerfile and GitHub Actions CI include a real HTTP endpoint and recorded browser demonstrations. View latest verification in [GitHub Actions](https://github.com/ahblxz/NEXTQUESTION-Veritas-2026/actions).
+- **Generated files:** artifacts/hospital/ contains the synthetic evaluation and error report; artifacts/mimic_real/ contains the separate real-record pilot model and evaluation; data source tables are excluded from release images.
 
-| Source file | Contents |
-|---|---|
-| \`hospital/engine.py\` | Simulated dataset, Bayesian differential, entropy-based test ranking, baseline evaluation |
-| \`hospital/audit.py\` | Held-out FP/FN and confusion matrices, safety-label errors, actual simulation failure examples, robustness |
-| \`hospital/public_benchmark.py\` | Pinned public dataset, deduplication-first symptom benchmark |
-| \`hospital_train.py\` | Reproduce locked synthetic benchmark and validation-selected settings |
-| \`app.py\` | Interactive patient intake, differential, prior fictional findings, test ranking and results |
-| \`tests/\` | Unit, leakage, split, app and real mobile/desktop browser tests |
-| \`notebooks/02_run_complete_project.ipynb\` | Colab evaluation and temporary live demo |
-| \`Dockerfile\`, \`.github/workflows/ci.yml\` | Deployable container and end-to-end CI |
+**Dependencies and development:** Python, NumPy, Gradio, pytest, Playwright, Docker, GitHub Actions, Google Colab; dataset credits and links above. AI coding assistance included OpenAI ChatGPT and Anthropic Claude. No pretrained clinical model, paid clinical API or private patient database was used.
 
-All research outputs regenerate in \`artifacts/hospital/\`: \`metrics.json\`, \`audit_metrics.json\`, \`audit_report.md\`, \`results.md\`, \`public/metrics.json\` and deterministic demo scenarios. The [GitHub Actions tab](https://github.com/ahblxz/NEXTQUESTION-Veritas-2026/actions) provides reproducible logs and a downloadable results/screenshot artifact.
+### Limitations
 
-**Libraries and tools:** Python 3.11, NumPy, Gradio, pytest, Playwright, Docker, GitHub Actions, Google Colab; public symptom benchmark source linked above; AI development assistance included [OpenAI ChatGPT](https://chatgpt.com/) and [Anthropic Claude](https://claude.ai/). No pretrained clinical model, paid clinical API or private patient database was used. All tools actually used by team members must be disclosed on the submission form.
-
-## Important limitations
-
-A correct result on **fabricated** diagnoses is not a clinically valid diagnosis. Test prices are made-up effort points. The full panel is an artificial comparison, not standard medical practice. The model covers only 21 artificial labels and can miss urgent-labeled cases. The text parser may mishandle unusual language or negation. This demo does not interpret actual numerical lab ranges or clinical guidelines and is not suitable for use with patients. Deployment as educational software is separate from medical-device approval.
+Synthetic likelihoods and effort points are not actual test performance or prices. In the real-record pilot, diagnoses are coarse discharge-code categories, histories are incomplete, and the available-test list has hindsight bias. The public sample is very small, adverse cases are poorly recognized, and no algorithm is validated to safely omit diagnostic workup. Any future medical use would require independent clinician review, institutional approvals, outcome-based testing and real financial measurements.
 
 **This project is a prototype and is not medical advice.**
