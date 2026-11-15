@@ -158,6 +158,24 @@ def main():
             expect(desktop.get_by_role("button", name="Start assessment")).to_be_enabled(timeout=30000)
             desktop.get_by_role("button", name="Start assessment").click()
             expect(desktop.get_by_text("Possible explanations to investigate")).to_be_visible(timeout=30000)
+            # Separate real EHR research explorer, after the MIMIC public data step.
+            real_accordion = desktop.get_by_text(
+                "Explore real public de-identified hospital records (separate research pilot)",
+                exact=True
+            )
+            expect(real_accordion).to_be_visible(timeout=30000)
+            real_accordion.click()
+            actual_start = desktop.get_by_role("button", name="Explore public encounter")
+            expect(actual_start).to_be_visible(timeout=30000)
+            actual_start.click()
+            actual_result = desktop.get_by_role("button", name="Reveal recorded lab finding")
+            expect(actual_result).to_be_enabled(timeout=30000)
+            actual_result.click()
+            expect(desktop.get_by_text("Actual recorded lab flags").first).to_be_visible(timeout=30000)
+            expect(desktop.get_by_text("23.1%").first).to_be_visible(timeout=30000)
+            desktop.screenshot(
+                path="artifacts/hospital/desktop_real_public_pilot.png", full_page=True
+            )
             desktop.screenshot(path="artifacts/hospital/desktop_demo_verified.png", full_page=True)
             desktop.close()
             assert not exceptions, f"Browser JS error: {exceptions}"
