@@ -71,14 +71,10 @@ def test_real_artifacts_from_validation_not_heldout():
     examples = json.loads((root / "real_demo_cases.json").read_text())
     data, _, _ = mimic_real.load_cases()
     train, val, test = mimic_real.patient_split(data)
-    expected = [
-        {"id":f"Public EHR example {i+1:02d}",
-         "complaint":c["complaint"] or "No linked ED chief complaint",
-         "available_labs":c["observed"],
-         "label":c["group"]}
-        for i,c in enumerate(val[:12])
-    ]
+    expected = mimic_real.demo_validation_cases(val)
     assert examples == expected
+    assert len(examples[0]["complaint"].strip()) >= 7
+    assert "patient" not in examples[0] and "hadm" not in examples[0]
     assert set(x["patient"] for x in test).isdisjoint(x["patient"] for x in val)
 
 
