@@ -60,6 +60,14 @@ jobs:
           python -m pip install playwright
           python -m playwright install chromium
           python tests/browser_smoke.py
+      - name: Upload screenshot even if visual QA fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextquestion-visual-review
+          path: artifacts/hospital/mobile_initial_polished.png
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Record genuine captioned browser demonstration
         run: python tests/record_demo.py
       - name: Build deployable Docker image and verify HTTP endpoint
