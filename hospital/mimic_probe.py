@@ -40,7 +40,7 @@ def get_ed(name, cache=Path("artifacts/mimic_real/source")):
         req = urllib.request.Request(ED_BASE + name + ".csv.gz", headers={"User-Agent": "NEXTQUESTION-Veritas-Academic/1.0"})
         with urllib.request.urlopen(req, timeout=60) as resp:
             content = resp.read()
-        if not content.startswith(b"\\x1f\\x8b"):
+        if not content.startswith(b"\x1f\x8b"):
             raise ValueError("Expected gzipped ED demo table: " + name)
         filename.write_bytes(content)
     with gzip.open(filename, mode="rt", encoding="utf-8-sig", newline="") as fp:
