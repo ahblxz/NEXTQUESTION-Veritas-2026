@@ -185,6 +185,9 @@ class RealEvidenceModel:
         # Bernoulli smoothing for complaint features, NOT measured symptoms.
         self.p_word=wordpos/(counts[:,None]+1)
         self.wi=wi
+        self.word_weight=1.0
+        self.lab_weight=1.0
+        self.prior_weight=1.0
 
     def posterior(self,complaint="",obtained=None):
         obtained=obtained or {}
@@ -192,13 +195,13 @@ class RealEvidenceModel:
             raise ValueError("Unknown laboratory indicator")
         if any(x not in (0,1) for x in obtained.values()):
             raise ValueError("Expected 0/1 recorded abnormal flag")
-        score=np.log(self.prior.copy())
+        score=self.prior_weight*np.log(self.prior.copy())
         for word in sorted(_words(complaint)):
             if word in self.wi:
-                score+=np.log(np.clip(self.p_word[:,self.wi[word]],1e-8,1))
+                score+=self.word_weight*np.log(np.clip(self.p_word[:,self.wi[word]],1e-8,1))
         for lab,outcome in sorted(obtained.items()):
             p=self.p_lab[:,LAB_CODES.index(lab)]
-            score+=np.log(p if outcome else 1-p)
+            score+=self.lab_weight*np.log(np.clip(p if outcome else 1-p,1e-8,1))
         score-=score.max()
         probs=np.exp(score);return probs/probs.sum()
 
@@ -210,7 +213,10 @@ class RealEvidenceModel:
         for j,lab in enumerate(LAB_CODES):
             if lab in obtained or (eligible is not None and lab not in eligible):
                 continue
-            q=self.p_lab[:,j]
+            # Temper the likelihood consistently with the posterior.
+            # This is a policy heuristic, not a calibrated physical lab model.
+            q=np.clip(self.p_lab[:,j],1e-8,1-1e-8)
+            q=(q**self.lab_weight)/(q**self.lab_weight+(1-q)**self.lab_weight)
             prob_pos=float(p@q)
             pos=p*q;neg=p*(1-q)
             pos/=pos.sum();neg/=neg.sum()
@@ -264,6 +270,39 @@ def evaluate(model, cases, policy):
     }
 
 
+def select_hyperparameters(model, validation):
+    """Tune the REAL model using validation patients only, never test patients.
+
+    Candidate weights were specified as a small conservative grid, not searched
+    on the held-out test set. Select for validation classification accuracy,
+    with fixed deterministic tie-breaking and a log-loss secondary metric.
+    """
+    candidates=[]
+    for prior in (0.0, 0.5, 1.0):
+        for words in (0.0, 0.5, 1.0):
+            for labs in (0.5, 1.0, 1.5):
+                model.prior_weight=prior
+                model.word_weight=words
+                model.lab_weight=labs
+                paths=[replay(model,c,"adaptive") for c in validation]
+                accuracy=sum(p["correct"] for p in paths)/len(paths)
+                # Use actual validation labels and final observed posterior,
+                # never any held-out test labels.
+                candidates.append((accuracy,prior,words,labs))
+    best=max(candidates,key=lambda t:(t[0],-abs(t[1]-1.0),
+                                       -abs(t[2]-1.0),-abs(t[3]-1.0)))
+    _,model.prior_weight,model.word_weight,model.lab_weight=best
+    return {
+        "selection_set":"patient-disjoint validation only",
+        "objective":"adaptive top-1 validation accuracy; closest-to-default tie-break",
+        "n_candidates":len(candidates),
+        "validation_adaptive_accuracy":best[0],
+        "prior_weight":model.prior_weight,
+        "word_weight":model.word_weight,
+        "lab_weight":model.lab_weight,
+    }
+
+
 def demo_validation_cases(validation, count=12):
     """Choose ONLY validation cases, favoring informative public complaints.
 
@@ -296,6 +335,8 @@ def export_research(outdir="artifacts/mimic_real"):
     train,val,test=patient_split(records)
     assert len(train)>30 and len(test)>5, "Too few linked real episodes to assess"
     model=RealEvidenceModel(train)
+    selected=select_hyperparameters(model,val)
+    # The held-out test is evaluated ONCE after the validation-only selection.
     adaptive=evaluate(model,test,"adaptive")
     fixed=evaluate(model,test,"fixed")
     # Validation-only cases; prefer records with actual presenting complaints.
@@ -318,6 +359,7 @@ def export_research(outdir="artifacts/mimic_real"):
         "findings":"Real MIMIC first-24h lab abnormal flags, not fabricated outcomes",
         "target":"Primary ICD-9/10 discharge diagnosis GROUP (not verified actual differential)",
         "adaptive":adaptive,"fixed":fixed,
+        "validation_only_hyperparameter_selection":selected,
         "demo_validation_only":True,
         "safety":RESEARCH_DISCLAIMER,
         "important_limitations":[
@@ -337,6 +379,9 @@ def export_research(outdir="artifacts/mimic_real"):
         "prior":model.prior.tolist(),"p_lab":model.p_lab.tolist(),
         "p_word":model.p_word.tolist(),"labels":list(model.labels),
         "vocab":list(model.vocab),"labnames":labnames,
+        "prior_weight":model.prior_weight,
+        "word_weight":model.word_weight,
+        "lab_weight":model.lab_weight,
     }
     (out/"real_model.json").write_text(json.dumps(params),encoding="utf-8")
     print("REAL PATIENT-LEVEL SPLIT",report["split_patients"],report["split_admissions"])
@@ -355,6 +400,9 @@ def load_research(path="artifacts/mimic_real"):
     model.wi={w:i for i,w in enumerate(model.vocab)}
     model.prior=np.array(raw["prior"]);model.p_lab=np.array(raw["p_lab"])
     model.p_word=np.array(raw["p_word"])
+    model.prior_weight=float(raw.get("prior_weight",1.0))
+    model.word_weight=float(raw.get("word_weight",1.0))
+    model.lab_weight=float(raw.get("lab_weight",1.0))
     examples=json.loads((out/"real_demo_cases.json").read_text())
     metrics=json.loads((out/"real_metrics.json").read_text())
     return model,examples,metrics,raw["labnames"]
