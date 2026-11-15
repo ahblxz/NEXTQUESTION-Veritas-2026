@@ -151,3 +151,36 @@ def test_interactive_adaptive_stop_matches_research_policy():
     if confidence >= app.THRESHOLD:
         repeated = app.acquire(state)[0]
         assert repeated == state, "UI must not add results after its selected stopping criterion"
+
+
+
+def test_fictional_preexisting_results_do_not_consume_new_test_budget():
+    import app
+    state = app.start(
+        app.MANUAL_CASE, None, "fever and cough", [], []
+    )[0]
+    first = app.record_result(
+        state, "Not flagged", "head_ct", existing=True
+    )[0]
+    assert first["obtained"]["head_ct"] == 0
+    assert first["cost"] == 0
+    assert first["history"][0]["previously_available"] is True
+    assert first["history"][0]["incremental_cost"] == 0
+
+    after = app.record_result(
+        first, "Abnormal / flagged", "troponin", existing=False
+    )[0]
+    assert after["cost"] == app.COSTS["troponin"]
+    assert len(after["obtained"]) == 2
+
+
+def test_manual_new_testing_cannot_exceed_simulation_budget():
+    import app
+    state = app.start(
+        app.MANUAL_CASE, None, "headache and dizziness", [], []
+    )[0]
+    first = app.record_result(state, "Not flagged", "head_ct", existing=False)[0]
+    assert first["cost"] == app.COSTS["head_ct"]
+    second = app.record_result(first, "Not flagged", "troponin", existing=False)[0]
+    assert second["cost"] == first["cost"]
+    assert second["obtained"] == first["obtained"]
