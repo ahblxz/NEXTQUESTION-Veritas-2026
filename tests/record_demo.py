@@ -72,7 +72,7 @@ def main():
             page.get_by_role("button", name="Reset").click()
             page.get_by_text("Manual fictional case", exact=True).click()
             page.get_by_role("button", name="Start assessment").click()
-            manual = page.get_by_role("button", name="Record entered result")
+            manual = page.get_by_role("button", name="Record fictional result")
             expect(manual).to_be_enabled(timeout=30000)
             manual.click()
             expect(page.get_by_text("1 of 16 test types")).to_be_visible(timeout=30000)
