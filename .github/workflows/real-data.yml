@@ -1,0 +1,26 @@
+name: Real MIMIC-IV public data study
+on:
+  push:
+    branches: [main]
+    paths:
+      - hospital/mimic_*.py
+      - .github/workflows/real-data.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-real-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download authentic deidentified public hospital records and profile cohort
+        run: python -m hospital.mimic_probe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: real-mimic-source-data-quality
+          path: artifacts/mimic_real/probe.json
+          retention-days: 14
