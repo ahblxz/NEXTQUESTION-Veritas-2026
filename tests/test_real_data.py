@@ -83,6 +83,8 @@ def test_real_metrics_recomputed_from_heldout():
     metrics = json.loads((root / "real_metrics.json").read_text())
     train, val, test = mimic_real.patient_split(mimic_real.load_cases()[0])
     model = mimic_real.RealEvidenceModel(train)
+    selection = mimic_real.select_hyperparameters(model, val)
+    assert selection == metrics["validation_only_hyperparameter_selection"]
     assert metrics["adaptive"] == mimic_real.evaluate(model, test, "adaptive")
     assert metrics["fixed"] == mimic_real.evaluate(model, test, "fixed")
     assert metrics["split_patients"]["test"] == len(set(r["patient"] for r in test))
