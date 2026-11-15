@@ -40,6 +40,36 @@ def main():
             exceptions = []
             page.on("pageerror", lambda exc: exceptions.append(str(exc)))
             page.goto("http://127.0.0.1:7870/", wait_until="domcontentloaded", timeout=30000)
+            # Visual QA: no light default Gradio tiles in any intake form.
+            color_audit = page.evaluate("""() => {
+                const selectors = ['#nq-mode','#nq-scenario','#nq-complaint',
+                                   '#nq-symptoms','#nq-flags'];
+                const failures = [];
+                for (const selector of selectors) {
+                  const root = document.querySelector(selector);
+                  if (!root) { failures.push(selector + ': missing'); continue; }
+                  for (const el of [root, ...root.querySelectorAll('*')]) {
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width * rect.height < 550) continue;
+                    const color = getComputedStyle(el).backgroundColor;
+                    const nums = color.match(/[0-9.]+/g);
+                    if (nums && nums.length >= 3 &&
+                        +nums[0] > 193 && +nums[1] > 193 && +nums[2] > 193) {
+                      failures.push(selector + ' pale background: ' + color);
+                    }
+                  }
+                }
+                return {
+                  failures,
+                  screen: document.documentElement.scrollWidth,
+                  viewport: window.innerWidth,
+                };
+            }""")
+            assert not color_audit["failures"], f"Unstyled white input boxes: {color_audit}"
+            assert color_audit["screen"] <= color_audit["viewport"] + 6, (
+                f"Horizontal overflow on phone: {color_audit}"
+            )
+            print("PASS: premium dark UI palette and no horizontal phone overflow.")
             start_button = page.get_by_role("button", name="Start assessment")
             expect(start_button).to_be_enabled(timeout=30000)
             start_button.click()
@@ -50,7 +80,7 @@ def main():
             expect(page.get_by_text("1 of 16 test types")).to_be_visible(timeout=30000)
 
             # Editing any input MUST immediately clear stale assessment state.
-            page.get_by_label("Presenting complaint (fictional free text)").fill(
+            page.get_by_label("Presenting complaint").fill(
                 "headache and dizziness"
             )
             expect(next_button).to_be_disabled(timeout=30000)
@@ -62,7 +92,7 @@ def main():
             expect(next_button).to_be_disabled(timeout=30000)
             page.get_by_text("Manual fictional case", exact=True).click()
             start_button.click()
-            manual_button = page.get_by_role("button", name="Record entered result")
+            manual_button = page.get_by_role("button", name="Record fictional result")
             expect(manual_button).to_be_enabled(timeout=30000)
             manual_button.click()
             expect(page.get_by_text("1 of 16 test types")).to_be_visible(timeout=30000)
