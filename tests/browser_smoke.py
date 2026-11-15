@@ -41,35 +41,36 @@ def main():
             page.on("pageerror", lambda exc: exceptions.append(str(exc)))
             page.goto("http://127.0.0.1:7870/", wait_until="domcontentloaded", timeout=30000)
             # Visual QA: no light default Gradio tiles in any intake form.
-            color_audit = page.evaluate("""() => {
-                const selectors = ['#nq-mode','#nq-scenario','#nq-complaint',
-                                   '#nq-symptoms','#nq-flags'];
-                const failures = [];
-                for (const selector of selectors) {
-                  const root = document.querySelector(selector);
-                  if (!root) { failures.push(selector + ': missing'); continue; }
-                  for (const el of [root, ...root.querySelectorAll('*')]) {
-                    const rect = el.getBoundingClientRect();
-                    if (rect.width * rect.height < 550) continue;
-                    const color = getComputedStyle(el).backgroundColor;
-                    const nums = color.match(/[0-9.]+/g);
-                    if (nums && nums.length >= 3 &&
-                        +nums[0] > 193 && +nums[1] > 193 && +nums[2] > 193) {
-                      failures.push(selector + ' pale background: ' + color);
+            # Playwright's locator pierces Gradio's shadow DOM; document.querySelector
+            # alone doesn't, so inspect the actual computed styles on real inputs.
+            pale = []
+            for selector in (
+                "#nq-mode", "#nq-scenario", "#nq-complaint",
+                "#nq-symptoms", "#nq-flags"
+            ):
+                root = page.locator(selector)
+                assert root.count() == 1, f"Missing functional control: {selector}"
+                colors = root.evaluate("""(root) => {
+                    const failures = [];
+                    for (const el of [root, ...root.querySelectorAll('*')]) {
+                        const rect = el.getBoundingClientRect();
+                        if (rect.width * rect.height < 550) continue;
+                        const color = getComputedStyle(el).backgroundColor;
+                        const nums = color.match(/[0-9.]+/g);
+                        if (nums && nums.length >= 3 &&
+                            +nums[0] > 193 && +nums[1] > 193 && +nums[2] > 193) {
+                            failures.push(color + ' ' + el.tagName.toLowerCase());
+                        }
                     }
-                  }
-                }
-                return {
-                  failures,
-                  screen: document.documentElement.scrollWidth,
-                  viewport: window.innerWidth,
-                };
-            }""")
-            assert not color_audit["failures"], f"Unstyled white input boxes: {color_audit}"
-            assert color_audit["screen"] <= color_audit["viewport"] + 6, (
-                f"Horizontal overflow on phone: {color_audit}"
+                    return failures;
+                }""")
+                pale.extend([selector + ": " + value for value in colors])
+            assert not pale, f"Pale/unstyled UI elements: {pale}"
+            screen_width = page.evaluate("document.documentElement.scrollWidth")
+            assert screen_width <= 396, (
+                f"Horizontal overflow on 390px phone: {screen_width}"
             )
-            print("PASS: premium dark UI palette and no horizontal phone overflow.")
+            print("PASS: dark form controls; no default white input boxes or horizontal phone overflow.")
             start_button = page.get_by_role("button", name="Start assessment")
             expect(start_button).to_be_enabled(timeout=30000)
             start_button.click()
