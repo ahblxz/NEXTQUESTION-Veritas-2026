@@ -10,6 +10,7 @@ on:
       - 'notebooks/02_run_complete_project.ipynb'
       - 'requirements.txt'
       - 'Dockerfile'
+      - '.dockerignore'
       - '.gitignore'
       - 'README.md'
       - '.github/workflows/ci.yml'
