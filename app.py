@@ -703,11 +703,11 @@ with gr.Blocks(
                 '<div class="nq-step-title"><span>03</span> Diagnostic insight</div>'
             )
             with gr.Row(equal_height=False, elem_classes=["nq-metric-row"]):
-                status = gr.HTML()
-                burden = gr.HTML()
-            differential = gr.HTML()
-            tests = gr.HTML()
-            pathway = gr.HTML()
+                status = gr.HTML(value=_blank("Assessment overview", "Choose a fictional presentation and start the assessment."))
+                burden = gr.HTML(value=_blank("Testing burden", "Simulated acquisition effort will be tracked here."))
+            differential = gr.HTML(value=_blank("Possible explanations", "Model-ranked conditions will appear after intake."))
+            tests = gr.HTML(value=_blank("Next informative tests", "The model will rank unobserved tests after assessment."))
+            pathway = gr.HTML(value=_blank("Investigation timeline", "Each revealed test finding will be documented here."))
 
     gr.HTML(
         '<p class="nq-foot"><strong>NEXTQUESTION</strong> · Abdulla Alhajaj, '
