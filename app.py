@@ -798,8 +798,8 @@ with gr.Blocks(
             pathway = gr.HTML(value=_blank("Investigation timeline", "Each revealed test finding will be documented here."))
 
     gr.HTML(
-        '<p class="nq-foot"><strong>NEXTQUESTION</strong> · Abdulla Alhajaj, '
-        'Zayed Alketbi, Mohammed Alali · Veritas AI 2026. This application '
+        '<p class="nq-foot"><strong>NEXTQUESTION</strong> · Veritas AI 2026. '
+        'This application '
         'contains only simplified, synthetic condition labels, test results '
         'and effort points. Its keyword parser, clinical predictions, '
         'and urgency warnings are not validated for real patients. '
