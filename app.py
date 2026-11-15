@@ -40,6 +40,8 @@ html, body, gradio-app, #root, .gradio-container {
   background: #070d17 !important; color: #e9f4fb !important;
 }
 body { margin:0; }
+/* Keep the competition UI focused; framework credits remain in README. */
+.gradio-container footer {display:none !important;}
 .gradio-container {
   max-width: 1420px !important; padding: 18px 30px 36px !important;
   margin: 0 auto !important;
