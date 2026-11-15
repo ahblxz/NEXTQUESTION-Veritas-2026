@@ -36,7 +36,7 @@ jobs:
           test -f notebooks/02_run_complete_project.ipynb
           test -f requirements.txt
       - name: Compile every active Python module
-        run: python -m py_compile hospital/engine.py hospital/audit.py hospital/public_benchmark.py hospital_train.py app.py tests/test_hospital.py tests/test_audit.py tests/browser_smoke.py tests/record_demo.py
+        run: python -m py_compile hospital/engine.py hospital/audit.py hospital/public_benchmark.py hospital/mimic_probe.py hospital/mimic_real.py hospital/real_ui.py hospital_train.py app.py tests/test_hospital.py tests/test_audit.py tests/test_real_data.py tests/browser_smoke.py tests/record_demo.py
       - name: Verify official Colab notebook parses
         run: |
           python - <<'PY'
@@ -55,6 +55,10 @@ jobs:
         run: python -m hospital.audit
       - name: Evaluate independently sourced public symptom dataset (not lab tests)
         run: python -m hospital.public_benchmark
+      - name: Reproduce real public de-identified MIMIC hospital-record pilot
+        run: python -m hospital.mimic_real
+      - name: Verify real-record train/test leakage, observed findings and benchmark
+        run: PYTHONPATH=. python -m pytest -q tests/test_real_data.py
       - name: Launch Gradio and click real mobile interface
         run: |
           python -m pip install playwright
@@ -65,7 +69,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nextquestion-visual-review
-          path: artifacts/hospital/mobile_initial_polished.png
+          path: |
+            artifacts/hospital/
+            artifacts/mimic_real/real_metrics.json
+            artifacts/mimic_real/real_model.json
+            artifacts/mimic_real/real_demo_cases.jsonmobile_initial_polished.png
           if-no-files-found: ignore
           retention-days: 7
       - name: Record genuine captioned browser demonstration
