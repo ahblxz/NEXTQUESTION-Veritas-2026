@@ -109,6 +109,7 @@ def _render(state):
     posterior = MODEL.posterior(symptoms, known)
     candidates = MODEL.candidates(symptoms, known, top=5)
     progress = len(known)
+    research_stop = progress > 0 and float(posterior.max()) >= THRESHOLD
     flags = state.get("flags", [])
     urgent_mass = float(posterior[URGENCY].sum())
     alert = bool(flags or {"chest_pain", "breathlessness", "weakness"} & set(symptoms))
@@ -155,7 +156,13 @@ def _render(state):
             f'likelihood: {row["abnormal_likelihood"]:.0%}</div></div>'
             f'<span class="nq-pill">{row["cost"]} effort pts</span></div>'
         )
-    if ranking:
+    if research_stop:
+        explanation = (
+            f"The research policy's validation-selected stopping threshold "
+            f"({THRESHOLD:.0%} relative top-class weight) has been reached. "
+            "Suggested acquisition pauses here; this NEVER means medically safe to stop testing."
+        )
+    elif ranking:
         explanation = ('Highest estimated reduction in diagnostic uncertainty per '
                        'synthetic effort point under the current budget.')
     else:
@@ -185,7 +192,7 @@ def _render(state):
         'practice. The difference is NOT a medical saving or evidence any test is unnecessary.</p>'
         '</div>'
     )
-    enabled = bool(ranking) and len(known) < 6
+    enabled = bool(ranking) and len(known) < 6 and not research_stop
     return status, differential, tests, timeline, burden, (
         gr.update(interactive=enabled and state["mode"] == SIMULATED_CASE)
     ), (
@@ -235,6 +242,10 @@ def _add_result(state, finding, test_key=None):
 
 def acquire(state):
     if not state or state.get("mode") != SIMULATED_CASE:
+        return state, *_render(state)
+    # Match the evaluation stopping rule; bypassing a disabled UI button
+    # cannot silently acquire additional synthetic results.
+    if state["obtained"] and float(MODEL.posterior(state["symptoms"], state["obtained"]).max()) >= THRESHOLD:
         return state, *_render(state)
     case = BY_SCENARIO[state["scenario"]]
     ranked = MODEL.ranking(state["symptoms"], state["obtained"],
