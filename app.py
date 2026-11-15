@@ -197,8 +197,9 @@ def _render(state):
         finding = "abnormal / flagged" if step["value"] else "not flagged"
         steps.append(
             f'<div class="nq-step"><strong>{escape(TESTS[step["key"]][0])}</strong>'
-            f'<p>{escape(finding)} · +{COSTS[step["key"]]} simulated pts '
-            f'· leading model weight {step["confidence"]:.1%}</p></div>'
+            f'<p>{escape(finding)} · +{step.get("incremental_cost", COSTS[step["key"]])} simulated pts '
+            f'{" · already available" if step.get("previously_available") else ""}'
+            f' · leading model weight {step["confidence"]:.1%}</p></div>'
         )
     timeline = ('<div class="nq-card"><h3>Sequential investigation history</h3>'
                 + "".join(steps) + '</div>')
@@ -216,7 +217,7 @@ def _render(state):
     return status, differential, tests, timeline, burden, (
         gr.update(interactive=enabled and state["mode"] == SIMULATED_CASE)
     ), (
-        gr.update(interactive=enabled and state["mode"] == MANUAL_CASE)
+        gr.update(interactive=len(known) < 6 and state["mode"] == MANUAL_CASE)
     )
 
 
@@ -235,7 +236,7 @@ def start(mode, scenario, complaint, selected, flags):
     return state, *_render(state)
 
 
-def _add_result(state, finding, test_key=None):
+def _add_result(state, finding, test_key=None, already_available=False):
     if not state or len(state["obtained"]) >= 6:
         return (state, *_render(state))
     if test_key is None:
@@ -251,12 +252,18 @@ def _add_result(state, finding, test_key=None):
             return (state, *_render(state))
     if finding not in (0, 1):
         raise ValueError("A synthetic test result must be abnormal or not flagged")
+    additional_effort = 0 if already_available else COSTS[key]
+    if state["cost"] + additional_effort > state["budget"]:
+        return state, *_render(state)
     state = {**state, "obtained": dict(state["obtained"]),
              "history": list(state["history"])}
     state["obtained"][key] = finding
-    state["cost"] += COSTS[key]
+    state["cost"] += additional_effort
     confidence = float(MODEL.posterior(state["symptoms"], state["obtained"]).max())
-    state["history"].append({"key": key, "value": finding, "confidence": confidence})
+    state["history"].append({
+        "key": key, "value": finding, "confidence": confidence,
+        "incremental_cost": additional_effort, "previously_available": bool(already_available),
+    })
     return state, *_render(state)
 
 
@@ -276,10 +283,13 @@ def acquire(state):
     return _add_result(state, int(case["test_findings"][key]))
 
 
-def record_result(state, result, test_key=None):
+def record_result(state, result, test_key=None, existing=False):
     if not state or state.get("mode") != MANUAL_CASE:
         return state, *_render(state)
-    return _add_result(state, 1 if result == "Abnormal / flagged" else 0, test_key)
+    return _add_result(
+        state, 1 if result == "Abnormal / flagged" else 0, test_key,
+        already_available=bool(existing),
+    )
 
 
 def reset():
@@ -366,6 +376,10 @@ with gr.Blocks(title="NEXTQUESTION | Hospital diagnostic test prioritization") a
                     value="cbc",
                     label="Known or clinician-chosen fictional test",
                 )
+                existing = gr.Checkbox(
+                    value=True,
+                    label="This fictional result was already available (no new test effort)",
+                )
                 btn_manual = gr.Button("Record entered result", interactive=False)
             summary = gr.HTML()
             burden = gr.HTML()
@@ -399,7 +413,7 @@ with gr.Blocks(title="NEXTQUESTION | Hospital diagnostic test prioritization") a
     btn_start.click(start, inputs=[mode, scenario, complaint, selected, flags],
                     outputs=outputs, show_progress="minimal")
     btn_next.click(acquire, inputs=state, outputs=outputs, show_progress="minimal")
-    btn_manual.click(record_result, inputs=[state, result, manual_test], outputs=outputs,
+    btn_manual.click(record_result, inputs=[state, result, manual_test, existing], outputs=outputs,
                      show_progress="minimal")
     btn_reset.click(reset, outputs=outputs)
 
