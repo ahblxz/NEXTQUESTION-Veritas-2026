@@ -15,6 +15,7 @@ from pathlib import Path
 
 BASE = "https://physionet.org/files/mimic-iv-demo/2.2/hosp/"
 FILES = ["patients", "admissions", "diagnoses_icd", "d_labitems", "labevents"]
+ED_BASE = "https://physionet.org/files/mimic-iv-ed-demo/2.2/ed/"
 
 
 def get(name, cache=Path("artifacts/mimic_real/source")):
@@ -26,6 +27,21 @@ def get(name, cache=Path("artifacts/mimic_real/source")):
             content = resp.read()
         if not content.startswith(b"\x1f\x8b"):
             raise ValueError(f"Remote MIMIC download was not gzip: {name}")
+        filename.write_bytes(content)
+    with gzip.open(filename, mode="rt", encoding="utf-8-sig", newline="") as fp:
+        return list(csv.DictReader(fp))
+
+
+
+def get_ed(name, cache=Path("artifacts/mimic_real/source")):
+    cache.mkdir(parents=True, exist_ok=True)
+    filename = cache / ("ed_" + name + ".csv.gz")
+    if not filename.is_file():
+        req = urllib.request.Request(ED_BASE + name + ".csv.gz", headers={"User-Agent": "NEXTQUESTION-Veritas-Academic/1.0"})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            content = resp.read()
+        if not content.startswith(b"\\x1f\\x8b"):
+            raise ValueError("Expected gzipped ED demo table: " + name)
         filename.write_bytes(content)
     with gzip.open(filename, mode="rt", encoding="utf-8-sig", newline="") as fp:
         return list(csv.DictReader(fp))
@@ -59,6 +75,11 @@ def chapter(row):
 def main():
     tables = {name:get(name) for name in FILES}
     print("MIMIC PUBLIC REAL TABLE SIZES", {k:len(v) for k,v in tables.items()})
+    ed = {name: get_ed(name) for name in ("edstays", "triage")}
+    print("ED REAL TABLE SIZES", {k: len(v) for k, v in ed.items()})
+    print("EDSTAYS COLUMNS", list(ed["edstays"][0]))
+    print("TRIAGE COLUMNS", list(ed["triage"][0]))
+    print("TRIAGE EXAMPLE", [{k:v for k,v in row.items() if k in ("chiefcomplaint","temperature","heartrate","resprate","o2sat","acuity")} for row in ed["triage"][:3]])
     print("LAB DATA COLUMNS",list(tables["labevents"][0]))
     print("DIAGNOSIS COLUMNS",list(tables["diagnoses_icd"][0]))
     print("ADMISSIONS COLUMNS",list(tables["admissions"][0]))
