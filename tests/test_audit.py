@@ -78,7 +78,7 @@ def test_no_duplicate_result_proposal_many_paths():
     d = engine.generate_cases(320, seed=638)
     train, _, test = engine.split_cases(d, seed=638)
     model = engine.BayesTestModel.fit(train)
-    for i in range(80):
+    for i in range(min(80, len(test["diagnosis"]))):
         sample = {k: arr[i] for k, arr in test.items()}
         for policy in ("adaptive", "fixed", "cheapest", "all"):
             r = engine.policy_path(model, sample, policy)
