@@ -124,3 +124,14 @@ def test_failure_explanation_cannot_include_private_patient_data():
         assert e["actual_simulated_condition"] in engine.KEYS
         assert e["predicted_simulated_condition"] in engine.KEYS
         assert "possible_reason_not_proven" in e
+
+
+@pytest.mark.parametrize("complaint,excluded,kept", [
+    ("no chest pain, but fever and cough", "chest_pain", "fever"),
+    ("denies shortness of breath but has headache", "breathlessness", "headache"),
+    ("without vomiting; abdominal pain persists", "vomiting", "abdominal_pain"),
+])
+def test_conservative_negation_in_fictional_parser(complaint, excluded, kept):
+    detected = engine.extract_symptoms(complaint)
+    assert excluded not in detected, (complaint, detected)
+    assert kept in detected, (complaint, detected)
