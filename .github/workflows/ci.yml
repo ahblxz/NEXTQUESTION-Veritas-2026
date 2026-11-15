@@ -96,6 +96,8 @@ jobs:
             exit 1
           fi
           curl --silent --show-error --fail http://127.0.0.1:7867/config | python -c 'import json,sys; cfg=json.load(sys.stdin); assert "NEXTQUESTION" in cfg["title"]; print("Docker demo serves live Gradio UI")'
+          docker exec nextquestion-qa python -c 'from hospital import real_ui; assert real_ui.READY and len(real_ui.CASES) >= 8; print("Container includes genuine public EHR research pilot")'
+          docker exec nextquestion-qa python -c 'from pathlib import Path; assert not Path("artifacts/mimic_real/source").exists(); print("Container excludes raw hospital EHR tables")'
       - name: Export clean standalone submission source
         uses: actions/upload-artifact@v4
         with:
