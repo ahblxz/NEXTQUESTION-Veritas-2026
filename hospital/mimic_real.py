@@ -264,6 +264,32 @@ def evaluate(model, cases, policy):
     }
 
 
+def demo_validation_cases(validation, count=12):
+    """Choose ONLY validation cases, favoring informative public complaints.
+
+    This affects presentation order, not model training or held-out metrics.
+    Missing/uninterpretable ED complaints remain supported and labeled.
+    """
+    unique = sorted(
+        enumerate(validation),
+        key=lambda pair: (
+            not bool(pair[1]["complaint"].strip()),
+            len(pair[1]["complaint"].strip()) < 7,
+            pair[0],
+        ),
+    )
+    selected = [c for _, c in unique[:count]]
+    return [
+        {
+            "id": f"Public EHR example {i+1:02d}",
+            "complaint": c["complaint"] or "No linked ED chief complaint",
+            "available_labs": c["observed"],
+            "label": c["group"],
+        }
+        for i, c in enumerate(selected)
+    ]
+
+
 def export_research(outdir="artifacts/mimic_real"):
     out=Path(outdir);out.mkdir(parents=True,exist_ok=True)
     records, labnames, stats=load_cases()
@@ -272,14 +298,9 @@ def export_research(outdir="artifacts/mimic_real"):
     model=RealEvidenceModel(train)
     adaptive=evaluate(model,test,"adaptive")
     fixed=evaluate(model,test,"fixed")
-    # Validation-only cases for the actual site. No subject_id, hadm_id exported.
-    examples=[]
-    for i,c in enumerate(val[:12]):
-        examples.append({
-            "id":f"Public EHR example {i+1:02d}",
-            "complaint":c["complaint"] or "No linked ED chief complaint",
-            "available_labs":c["observed"],"label":c["group"],
-        })
+    # Validation-only cases; prefer records with actual presenting complaints.
+    # No subject_id or hadm_id is exported in the interface.
+    examples = demo_validation_cases(val)
     report={
         "title":"REAL MIMIC-IV public demo: retrospective preliminary pilot",
         "source":"PhysioNet MIMIC-IV Clinical Database Demo 2.2 + MIMIC-IV-ED Demo 2.2",
