@@ -172,7 +172,7 @@ def main():
             expect(actual_result).to_be_enabled(timeout=30000)
             actual_result.click()
             expect(desktop.get_by_text("Actual recorded lab flags").first).to_be_visible(timeout=30000)
-            expect(desktop.get_by_text("23.1%").first).to_be_visible(timeout=30000)
+            expect(desktop.get_by_text("Adaptive accuracy").first).to_be_visible(timeout=30000)
             desktop.screenshot(
                 path="artifacts/hospital/desktop_real_public_pilot.png", full_page=True
             )
