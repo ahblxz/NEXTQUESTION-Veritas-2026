@@ -1,0 +1,96 @@
+name: NEXTQUESTION hospital research QA
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'hospital/**'
+      - 'hospital_train.py'
+      - 'app.py'
+      - 'tests/test_hospital.py'
+      - 'tests/browser_smoke.py'
+      - 'notebooks/02_run_complete_project.ipynb'
+      - 'requirements.txt'
+      - 'Dockerfile'
+      - '.gitignore'
+      - 'README.md'
+      - '.github/workflows/ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-synthetic-hospital:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install pinned-major dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Compile every active Python module
+        run: python -m py_compile hospital/engine.py hospital_train.py app.py tests/test_hospital.py tests/browser_smoke.py
+      - name: Verify official Colab notebook parses
+        run: |
+          python - <<'PY'
+          import ast,json
+          obj=json.load(open('notebooks/02_run_complete_project.ipynb'))
+          for n,c in enumerate(obj['cells']):
+              if c['cell_type']=='code':
+                  ast.parse(''.join(c['source']), filename=f'cell {n}')
+          print("All official Colab Python cells compile")
+          PY
+      - name: Run multi-condition model, safety, and dashboard regressions
+        run: PYTHONPATH=. python -m pytest -q tests/test_hospital.py
+      - name: Evaluate 4800 synthetic cases with held-out test split
+        run: python hospital_train.py --out artifacts/hospital --n 4800
+      - name: Launch Gradio and click real mobile interface
+        run: |
+          python -m pip install playwright
+          python -m playwright install chromium
+          python tests/browser_smoke.py
+      - name: Build deployable Docker image and verify HTTP endpoint
+        run: |
+          docker build --tag nextquestion:qa .
+          docker run -d --name nextquestion-qa -p 7867:7860 nextquestion:qa
+          trap 'docker rm -f nextquestion-qa >/dev/null 2>&1 || true' EXIT
+          ready=0
+          for i in $(seq 1 70); do
+            if curl --silent --fail --output /dev/null http://127.0.0.1:7867/; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            docker logs nextquestion-qa
+            exit 1
+          fi
+          curl --silent --show-error --fail http://127.0.0.1:7867/config | python -c 'import json,sys; cfg=json.load(sys.stdin); assert "NEXTQUESTION" in cfg["title"]; print("Docker demo serves live Gradio UI")'
+      - name: Export clean standalone submission source
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextquestion-clean-source
+          path: |
+            .github/workflows/ci.yml
+            .gitignore
+            Dockerfile
+            README.md
+            app.py
+            hospital/
+            hospital_train.py
+            notebooks/02_run_complete_project.ipynb
+            requirements.txt
+            tests/
+            !**/__pycache__/**
+            !**/.pytest_cache/**
+            !**/*.pyc
+          include-hidden-files: true
+          retention-days: 14
+      - name: Preserve model report and browser screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: hospital-research-qa
+          path: artifacts/hospital/
+          retention-days: 14
