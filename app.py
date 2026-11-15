@@ -306,6 +306,19 @@ body { margin:0; }
   .gradio-container .prose {
     width:100% !important;max-width:100% !important;min-width:0 !important;
   }
+  /* Gradio wraps the page in two extra padded shells. Eliminate those
+     on mobile so the medical dashboard actually uses the phone screen. */
+  .gradio-container .main.fillable,
+  .gradio-container .main.fillable > .wrap,
+  .gradio-container main.contain {
+    padding:0 !important;margin:0 !important;min-width:0 !important;
+  }
+  .gradio-container .block:has(.html-container) {
+    padding:0 !important;background:transparent !important;border:0 !important;
+  }
+  .gradio-container .html-container,.gradio-container .prose {
+    padding:0 !important;margin:0 !important;
+  }
   .nq-brand {flex-wrap:wrap !important;justify-content:flex-start !important;}
   .nq-tagline {white-space:normal !important;max-width:100% !important;}
   .nq-hero h1 {overflow-wrap:anywhere !important;}
