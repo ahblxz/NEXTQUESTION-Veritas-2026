@@ -49,6 +49,14 @@ def main():
             next_button.click()
             expect(page.get_by_text("1 of 16 test types")).to_be_visible(timeout=30000)
 
+            # Editing any input MUST immediately clear stale assessment state.
+            page.get_by_label("Presenting complaint (fictional free text)").fill(
+                "headache and dizziness"
+            )
+            expect(next_button).to_be_disabled(timeout=30000)
+            start_button.click()
+            expect(next_button).to_be_enabled(timeout=30000)
+
             # Test the other user-facing workflow, not only the simulated auto-result.
             page.get_by_role("button", name="Reset").click()
             expect(next_button).to_be_disabled(timeout=30000)
@@ -59,6 +67,14 @@ def main():
             manual_button.click()
             expect(page.get_by_text("1 of 16 test types")).to_be_visible(timeout=30000)
 
+            # Desktop smoke pass on a 1440px browser; same deployment serves both sizes.
+            desktop = browser.new_page(viewport={"width": 1440, "height": 900})
+            desktop.goto("http://127.0.0.1:7870/", wait_until="domcontentloaded", timeout=30000)
+            expect(desktop.get_by_role("button", name="Start assessment")).to_be_enabled(timeout=30000)
+            desktop.get_by_role("button", name="Start assessment").click()
+            expect(desktop.get_by_text("Possible explanations to investigate")).to_be_visible(timeout=30000)
+            desktop.screenshot(path="artifacts/hospital/desktop_demo_verified.png", full_page=True)
+            desktop.close()
             assert not exceptions, f"Browser JS error: {exceptions}"
             Path("artifacts/hospital").mkdir(parents=True, exist_ok=True)
             page.screenshot(path="artifacts/hospital/mobile_demo_verified.png", full_page=True)
